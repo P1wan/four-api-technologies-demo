@@ -3,11 +3,11 @@
 
 Este projeto demonstra diferentes tecnologias de invocação remota através de um serviço de streaming de músicas fictício, implementando **REST**, **GraphQL**, **SOAP** e **gRPC**.
 
-## 🎯 Objetivo
+##  Objetivo
 
 Demonstrar e comparar as principais tecnologias de comunicação distribuída através de um caso de uso prático: um serviço de streaming de músicas com usuários, músicas e playlists.
 
-## 🏗️ Arquitetura
+##  Arquitetura
 
 O projeto contém:
 - **5.000 usuários fictícios**
@@ -18,12 +18,12 @@ O projeto contém:
 
 | Tecnologia | Status | Porta | Descrição |
 |------------|--------|-------|-----------|
-| 🔵 REST | ✅ Funcional | 8000 | API RESTful com FastAPI |
-| 🟣 GraphQL | ✅ Funcional | 8001 | API GraphQL com Strawberry |
-| 🟡 SOAP | 📋 Demonstração | 8002 | Simulação SOAP com exemplos |
-| 🟢 gRPC | 📋 Demonstração | 8002 | Simulação gRPC com exemplos |
+|  REST | Funcional | 8000 | API RESTful com FastAPI |
+|  GraphQL |  Funcional | 8001 | API GraphQL com Strawberry |
+|  SOAP |  Demonstração | 8002 | Simulação SOAP com exemplos |
+|  gRPC |  Demonstração | 8002 | Simulação gRPC com exemplos |
 
-## 📁 Estrutura do Projeto
+##  Estrutura do Projeto
 
 ```
 .
@@ -41,7 +41,7 @@ O projeto contém:
 └── README.md                # Este arquivo
 ```
 
-## 🚀 Como Executar
+##  Como Executar
 
 ### 1. Instalar Dependências
 
@@ -68,7 +68,7 @@ python main.py
 
 Abra o navegador em: `http://localhost:3000` (ou a URL fornecida pelo Replit)
 
-## 🔧 Serviços Individuais
+##  Serviços Individuais
 
 ### REST API (Porta 8000)
 
@@ -107,7 +107,7 @@ python soap_grpc_demo.py
 
 Demonstrações conceituais com exemplos de WSDL, .proto e código de implementação.
 
-## 📊 Operações Disponíveis
+## Operações Disponíveis
 
 ### Consultas Principais
 1. **Listar usuários** - Todos os usuários do sistema
@@ -124,13 +124,13 @@ Demonstrações conceituais com exemplos de WSDL, .proto e código de implementa
 ## 🎮 Interface de Demonstração
 
 A interface web (`index.html`) permite:
-- ✅ Testar APIs REST e GraphQL em tempo real
-- 📊 Comparar métricas de performance
-- 📋 Ver demonstrações conceituais de SOAP e gRPC
-- ⏱️ Medir tempos de resposta
-- 📈 Acompanhar estatísticas de uso
+-  Testar APIs REST e GraphQL em tempo real
+-  Comparar métricas de performance
+-  Ver demonstrações conceituais de SOAP e gRPC
+-  Medir tempos de resposta
+-  Acompanhar estatísticas de uso
 
-## 🛠️ Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 - **Python 3.11+**
 - **FastAPI** - Framework REST moderno e rápido
@@ -139,9 +139,9 @@ A interface web (`index.html`) permite:
 - **Faker** - Geração de dados fictícios realistas
 - **CORS** - Habilitado para desenvolvimento web
 
-## 📋 Funcionalidades
+##  Funcionalidades
 
-### ✅ Implementado
+###  Implementado
 - [x] Geração de dados fictícios em massa
 - [x] API REST completa com FastAPI
 - [x] API GraphQL com queries complexas
@@ -150,7 +150,7 @@ A interface web (`index.html`) permite:
 - [x] Sistema de indexação para consultas rápidas
 - [x] Documentação automática das APIs
 
-### 📋 Demonstração Conceitual
+###  Demonstração Conceitual
 - [x] Exemplos de SOAP com WSDL
 - [x] Exemplos de gRPC com .proto
 - [x] Comparação teórica das tecnologias
@@ -170,22 +170,22 @@ A interface permite comparar:
 - **Tamanho das respostas** (JSON vs XML vs Protobuf)
 - **Facilidade de uso** e flexibilidade
 
-## 🚀 Deploy no Replit
+##  Deploy no Replit
 
 Este projeto está otimizado para execução no Replit:
-- ✅ Configuração automática de dependências
-- ✅ Detecção automática de portas
-- ✅ Interface web acessível publicamente
-- ✅ Logs detalhados para debugging
+- Configuração automática de dependências
+- Detecção automática de portas
+- Interface web acessível publicamente
+- Logs detalhados para debugging
 
-## 📝 Notas Técnicas
+## Notas Técnicas
 
 - Os dados são mantidos em memória para performance máxima
 - Índices são criados automaticamente para consultas O(1)
 - CORS está habilitado para desenvolvimento
 - Todas as portas são configuráveis via variáveis de ambiente
 
-## 🎓 Uso Acadêmico
+## Uso Acadêmico
 
 Este projeto serve como:
 - **Material didático** para computação distribuída
@@ -193,7 +193,7 @@ Este projeto serve como:
 - **Exemplo prático** de APIs modernas
 - **Base** para extensões e melhorias
 
-## 📞 APIs de Exemplo
+## APIs de Exemplo
 
 ### REST
 ```bash
