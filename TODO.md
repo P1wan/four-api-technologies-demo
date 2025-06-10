@@ -39,25 +39,21 @@
 ## 2. Clientes
 
 ### 2.1 Cliente REST
-- [ ] Implementar cliente em Python
 - [ ] Implementar cliente em JavaScript/Node.js
 - [ ] Adicionar tratamento de erros
 - [ ] Implementar retry logic
 
 ### 2.2 Cliente GraphQL
-- [ ] Implementar cliente em Python
 - [ ] Implementar cliente em JavaScript/Node.js
 - [ ] Adicionar tratamento de erros
 - [ ] Implementar cache de queries
 
 ### 2.3 Cliente SOAP
-- [ ] Implementar cliente em Python
 - [ ] Implementar cliente em JavaScript/Node.js
 - [ ] Adicionar tratamento de erros
 - [ ] Implementar validação de respostas
 
 ### 2.4 Cliente gRPC
-- [ ] Implementar cliente em Python
 - [ ] Implementar cliente em JavaScript/Node.js
 - [ ] Adicionar tratamento de erros
 - [ ] Implementar streaming
