@@ -24,21 +24,33 @@ fake = Faker('pt_BR')
 
 
 def gerar_usuarios(quantidade=5000):
-    """
-    Gera uma lista de usuários fictícios
-    """
+    """Gera uma lista de usuários fictícios com validação."""
     usuarios = []
+    ids_gerados = set()
 
     print(f"Gerando {quantidade} usuários...")
 
     for i in range(quantidade):
+        usuario_id = str(uuid.uuid4())
+        while usuario_id in ids_gerados:
+            usuario_id = str(uuid.uuid4())
+
+        nome = fake.name()
+        idade = random.randint(13, 80)
+
+        if not nome.strip():
+            raise ValueError("Nome de usuário não pode ser vazio")
+        if not 13 <= idade <= 80:
+            raise ValueError(f"Idade inválida: {idade}")
+
         usuario = {
-            "id": str(uuid.uuid4()),
-            "nome": fake.name(),
-            "idade":
-            random.randint(13, 80)  # Idade realista para usuários de streaming
+            "id": usuario_id,
+            "nome": nome,
+            "idade": idade,
+            "playlists": []  # Relacionamento: playlists do usuário
         }
         usuarios.append(usuario)
+        ids_gerados.add(usuario_id)
 
         # Mostrar progresso a cada 1000 usuários
         if (i + 1) % 1000 == 0:
@@ -48,10 +60,9 @@ def gerar_usuarios(quantidade=5000):
 
 
 def gerar_musicas(quantidade=10000):
-    """
-    Gera uma lista de músicas fictícias com gêneros variados
-    """
+    """Gera uma lista de músicas fictícias com validação."""
     musicas = []
+    ids_gerados = set()
 
     # Listas de nomes e artistas realistas
     nomes_musicas = [
@@ -79,14 +90,28 @@ def gerar_musicas(quantidade=10000):
     print(f"Gerando {quantidade} músicas...")
 
     for i in range(quantidade):
+        musica_id = str(uuid.uuid4())
+        while musica_id in ids_gerados:
+            musica_id = str(uuid.uuid4())
+
+        nome = random.choice(nomes_musicas) + f" {random.randint(1, 100)}"
+        artista = random.choice(artistas)
+        duracao = random.randint(120, 360)  # Entre 2 e 6 minutos
+
+        if not nome.strip() or not artista.strip():
+            raise ValueError("Nome da música ou artista não pode ser vazio")
+        if not 120 <= duracao <= 360:
+            raise ValueError(f"Duração inválida: {duracao}")
+
         musica = {
-            "id": str(uuid.uuid4()),
-            "nome":
-            random.choice(nomes_musicas) + f" {random.randint(1, 100)}",
-            "artista": random.choice(artistas),
-            "duracaoSegundos": random.randint(120, 360)  # Entre 2 e 6 minutos
+            "id": musica_id,
+            "nome": nome,
+            "artista": artista,
+            "duracaoSegundos": duracao,
+            "playlists": []  # Relacionamento: playlists que contêm a música
         }
         musicas.append(musica)
+        ids_gerados.add(musica_id)
 
         # Mostrar progresso a cada 2000 músicas
         if (i + 1) % 2000 == 0:
@@ -114,6 +139,10 @@ def gerar_playlists(usuarios, musicas, quantidade=3000):
 
     print(f"Gerando {quantidade} playlists...")
 
+    usuarios_por_id = {u["id"]: u for u in usuarios}
+    musicas_por_id = {m["id"]: m for m in musicas}
+    ids_gerados = set()
+
     for i in range(quantidade):
         # Selecionar um usuário aleatório como dono da playlist
         usuario_dono = random.choice(usuarios)
@@ -126,14 +155,33 @@ def gerar_playlists(usuarios, musicas, quantidade=3000):
                                                       len(musicas)))
         ids_musicas = [musica["id"] for musica in musicas_playlist]
 
+        if len(ids_musicas) != len(set(ids_musicas)):
+            raise ValueError("Músicas duplicadas em uma playlist")
+
+        playlist_id = str(uuid.uuid4())
+        while playlist_id in ids_gerados:
+            playlist_id = str(uuid.uuid4())
+
+        if usuario_dono["id"] not in usuarios_por_id:
+            raise ValueError("Usuário da playlist inexistente")
+        for id_musica in ids_musicas:
+            if id_musica not in musicas_por_id:
+                raise ValueError(f"Música inexistente: {id_musica}")
+
         playlist = {
-            "id": str(uuid.uuid4()),
+            "id": playlist_id,
             "nome":
             random.choice(nomes_playlists) + f" {random.randint(1, 100)}",
             "idUsuario": usuario_dono["id"],
             "musicas": ids_musicas
         }
         playlists.append(playlist)
+        ids_gerados.add(playlist_id)
+
+        # Relacionamentos
+        usuario_dono.setdefault("playlists", []).append(playlist_id)
+        for musica in musicas_playlist:
+            musica.setdefault("playlists", []).append(playlist_id)
 
         # Mostrar progresso a cada 500 playlists
         if (i + 1) % 500 == 0:
