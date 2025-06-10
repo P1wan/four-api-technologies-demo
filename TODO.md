@@ -5,8 +5,8 @@
 ### 1.1 Modelo de Dados
 - [x] Definir estrutura de dados (Usuários, Músicas, Playlists)
 - [x] Implementar modelo de dados em modelagem_dados.py
-- [ ] Adicionar validações de dados
-- [ ] Implementar relacionamentos entre entidades
+- [x] Adicionar validações de dados
+- [x] Implementar relacionamentos entre entidades
 
 ### 1.2 Serviços REST
 - [x] Implementar endpoints básicos
