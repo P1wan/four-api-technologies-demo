@@ -4,3 +4,7 @@ uvicorn[standard]==0.24.0
 strawberry-graphql[fastapi]==0.213.0
 requests>=2.31.0
 pyngrok>=7.0.0 
+spyne
+lxml
+grpcio
+grpcio-tools

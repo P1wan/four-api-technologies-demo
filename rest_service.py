@@ -304,7 +304,7 @@ async def obter_estatisticas():
         "status": "ativo"
     }
 
-# ========== ENDPOINTS CRUD OPCIONAIS (Para demonstração) ==========
+# ========== ENDPOINTS CRUD  ==========
 
 @app.post("/usuarios", response_model=Dict)
 async def criar_usuario(nome: str, idade: int):
