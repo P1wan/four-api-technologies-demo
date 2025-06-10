@@ -18,13 +18,24 @@ import signal
 import os
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from threading import Thread
+import http.server
+import socketserver
+import webbrowser
+from pathlib import Path
 
 
 def verificar_dependencias():
     """Verifica e instala dependências necessárias"""
-    dependencias = [("fastapi", "fastapi==0.104.1"),
-                    ("uvicorn", "uvicorn[standard]==0.24.0"),
-                    ("strawberry", "strawberry-graphql[fastapi]==0.213.0")]
+    dependencias = [
+        ("fastapi", "fastapi==0.104.1"),
+        ("uvicorn", "uvicorn[standard]==0.24.0"),
+        ("strawberry", "strawberry-graphql[fastapi]==0.213.0"),
+        ("grpcio", "grpcio==1.59.0"),
+        ("grpcio-tools", "grpcio-tools==1.59.0"),
+        ("grpcio-reflection", "grpcio-reflection==1.59.0"),
+        ("spyne", "spyne==2.14.0"),
+        ("lxml", "lxml==4.9.3")
+    ]
 
     dependencias_faltando = []
 
@@ -72,17 +83,45 @@ def executar_servico_graphql():
                 access_log=False)
 
 
-def executar_demonstracoes():
-    """Executa as demonstrações SOAP/gRPC"""
-    import uvicorn
-    from soap_grpc_demo import app
+def executar_servico_soap():
+    """Executa o serviço SOAP"""
+    from soap_service import executar_servidor
 
-    print("🟡 SOAP/gRPC: Iniciando demonstrações na porta 8002...")
+    print("🟡 SOAP: Iniciando na porta 8004...")
+    executar_servidor(host="0.0.0.0", port=8004)
+
+
+def executar_servico_grpc():
+    """Executa o serviço gRPC"""
+    from grpc_service import servir
+
+    print("🟢 gRPC: Iniciando na porta 50051...")
+    servir(porta=50051)
+
+
+def executar_servico_grpc_web():
+    """Executa o proxy gRPC-Web"""
+    import uvicorn
+    from grpc_web_proxy import app
+
+    print("🟢 gRPC-Web: Iniciando proxy na porta 8003...")
     uvicorn.run(app,
                 host="0.0.0.0",
-                port=8002,
+                port=8003,
                 log_level="error",
                 access_log=False)
+
+
+def executar_servidor_web():
+    """Executa servidor web para interfaces de cliente"""
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(Path.cwd()), **kwargs)
+
+    with socketserver.TCPServer(("", 8080), Handler) as httpd:
+        print("🌐 Servidor Web: Iniciando na porta 8080...")
+        print("   Acesse: http://localhost:8080")
+        httpd.serve_forever()
 
 
 def mostrar_banner():
@@ -98,7 +137,7 @@ def mostrar_banner():
 📋 TECNOLOGIAS IMPLEMENTADAS:
 ├── 🔵 REST      → FastAPI + Swagger UI
 ├── 🟣 GraphQL   → Strawberry + GraphiQL  
-├── 🟡 SOAP      → Demonstração com WSDL
+├── 🟡 SOAP      → Spyne + WSDL
 └── 🟢 gRPC      → Demonstração com Protocol Buffers
 
 🌐 URLS DE ACESSO (aguarde inicialização):
@@ -107,8 +146,20 @@ def mostrar_banner():
 ├─────────────┼──────────────────────────────────┼─────────────────┤
 │ REST        │ http://localhost:8000            │ /docs           │
 │ GraphQL     │ http://localhost:8001            │ /graphql        │
-│ SOAP+gRPC   │ http://localhost:8002            │ /               │
+│ SOAP        │ http://localhost:8004            │ /soap?wsdl      │
+│ gRPC        │ http://localhost:50051           │ -               │
+│ gRPC-Web    │ http://localhost:8003            │ -               │
 └─────────────┴──────────────────────────────────┴─────────────────┘
+
+📱 INTERFACES DE CLIENTE:
+┌─────────────┬──────────────────────────────────┐
+│ Tecnologia  │ URL                              │
+├─────────────┼──────────────────────────────────┤
+│ REST        │ http://localhost:8080/rest       │
+│ GraphQL     │ http://localhost:8080/graphql    │
+│ SOAP        │ http://localhost:8080/soap       │
+│ gRPC        │ http://localhost:8080/grpc       │
+└─────────────┴──────────────────────────────────┘
 
 ⚠️  IMPORTANTE: Mantenha este terminal aberto durante a demonstração!
 """
@@ -128,7 +179,9 @@ def mostrar_status_servicos():
          "Documentação interativa"),
         ("🟣 GraphQL", "http://localhost:8001", "Interface principal"),
         ("🟣 GraphiQL", "http://localhost:8001/graphql", "Editor de queries"),
-        ("🟡 SOAP+gRPC", "http://localhost:8002", "Demonstrações e exemplos")
+        ("🟢 gRPC", "http://localhost:50051", "Servidor gRPC"),
+        ("🟢 gRPC-Web", "http://localhost:8003", "Proxy gRPC-Web"),
+        ("🌐 Web", "http://localhost:8080", "Interfaces de cliente")
     ]
 
     for nome, url, descricao in servicos:
@@ -137,13 +190,13 @@ def mostrar_status_servicos():
     print("\n💡 DICAS PARA DEMONSTRAÇÃO:")
     print("1. 🔵 REST: Teste os endpoints em /docs (Swagger UI)")
     print("2. 🟣 GraphQL: Execute queries em /graphql (GraphiQL)")
-    print("3. 🟡 SOAP+gRPC: Veja códigos e exemplos na página principal")
+    print("3. 🟢 gRPC: Use a interface web em /grpc")
     print("4. 📊 Compare performance e características de cada tecnologia")
 
     print("\n🎯 ROTEIRO SUGERIDO (15 min):")
     print("• 5 min: REST - Demonstrar endpoints e JSON responses")
     print("• 5 min: GraphQL - Mostrar queries flexíveis e precisas")
-    print("• 3 min: SOAP/gRPC - Explicar código e características")
+    print("• 3 min: gRPC - Explicar streaming e performance")
     print("• 2 min: Comparação final e conclusões")
 
     print("\n" + "=" * 65)
@@ -175,9 +228,21 @@ def executar_modo_desenvolvimento():
     thread_graphql = Thread(target=executar_servico_graphql, daemon=True)
     threads.append(("GraphQL", thread_graphql))
 
-    # Thread Demonstrações
-    thread_demo = Thread(target=executar_demonstracoes, daemon=True)
-    threads.append(("SOAP+gRPC", thread_demo))
+    # Thread SOAP
+    thread_soap = Thread(target=executar_servico_soap, daemon=True)
+    threads.append(("SOAP", thread_soap))
+
+    # Thread gRPC
+    thread_grpc = Thread(target=executar_servico_grpc, daemon=True)
+    threads.append(("gRPC", thread_grpc))
+
+    # Thread gRPC-Web
+    thread_grpc_web = Thread(target=executar_servico_grpc_web, daemon=True)
+    threads.append(("gRPC-Web", thread_grpc_web))
+
+    # Thread Web Server
+    thread_web = Thread(target=executar_servidor_web, daemon=True)
+    threads.append(("Web", thread_web))
 
     # Iniciar todas as threads
     for nome, thread in threads:
@@ -192,6 +257,9 @@ def executar_modo_desenvolvimento():
     # Mostrar status
     mostrar_status_servicos()
 
+    # Abrir navegador com a página principal
+    webbrowser.open('http://localhost:8080')
+
     # Aguardar finalização
     aguardar_ctrl_c()
 
@@ -200,7 +268,7 @@ def executar_modo_producao():
     """Executa em modo produção com processos"""
     print("🚀 Modo: Produção (processos)")
 
-    with ProcessPoolExecutor(max_workers=3) as executor:
+    with ProcessPoolExecutor(max_workers=6) as executor:
         print("🔄 Iniciando processos dos serviços...")
 
         # Submeter processos
@@ -208,7 +276,13 @@ def executar_modo_producao():
         time.sleep(1)
         future_graphql = executor.submit(executar_servico_graphql)
         time.sleep(1)
-        future_demo = executor.submit(executar_demonstracoes)
+        future_soap = executor.submit(executar_servico_soap)
+        time.sleep(1)
+        future_grpc = executor.submit(executar_servico_grpc)
+        time.sleep(1)
+        future_grpc_web = executor.submit(executar_servico_grpc_web)
+        time.sleep(1)
+        future_web = executor.submit(executar_servidor_web)
 
         print("⏳ Aguardando inicialização...")
         time.sleep(10)
@@ -225,16 +299,20 @@ def executar_modo_producao():
 
 def executar_modo_simples():
     """Executa apenas um serviço por vez (para debugging)"""
-    servicos = [("REST", executar_servico_rest),
-                ("GraphQL", executar_servico_graphql),
-                ("SOAP+gRPC", executar_demonstracoes)]
+    servicos = [
+        ("REST", executar_servico_rest),
+        ("GraphQL", executar_servico_graphql),
+        ("gRPC", executar_servico_grpc),
+        ("gRPC-Web", executar_servico_grpc_web),
+        ("Web", executar_servidor_web)
+    ]
 
     print("🔧 Modo Simples: Escolha um serviço para executar")
     for i, (nome, _) in enumerate(servicos, 1):
         print(f"{i}. {nome}")
 
     try:
-        escolha = int(input("\nEscolha (1-3): ")) - 1
+        escolha = int(input("\nEscolha (1-5): ")) - 1
         if 0 <= escolha < len(servicos):
             nome, funcao = servicos[escolha]
             print(f"🚀 Executando apenas {nome}...")

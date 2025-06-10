@@ -1,63 +1,151 @@
-"""SOAP Backend Stub
-====================
+"""
+SOAP Service for Streaming Platform
+===================================
 
-Este arquivo contém a estrutura inicial de um serviço SOAP em Python. A
-implementação real pode utilizar bibliotecas como ``spyne`` ou ``zeep`` para
-expor o contrato WSDL e responder às operações SOAP. O objetivo deste stub é
-servir de guia de implementação para o projeto do Trabalho 6.
+Implements a SOAP service using Spyne for the streaming platform.
 """
 
-# Dependências sugeridas:
-#   pip install spyne lxml
-#
-# O arquivo ``streaming.wsdl`` deve descrever as operações abaixo. As classes e
-# métodos aqui definidos mostram como integrar o ``StreamingDataLoader`` para
-# fornecer dados reais ao serviço.
+from spyne import Application, rpc, ServiceBase, Unicode, Integer, Array, ComplexModel
+from spyne.protocol.soap import Soap11
+from spyne.server.wsgi import WsgiApplication
+from wsgiref.simple_server import make_server
+from typing import List, Optional
 
-from typing import List
-
-# from spyne import Application, rpc, ServiceBase, Integer, Unicode, Array
-# from spyne.protocol.soap import Soap11
-# from spyne.server.wsgi import WsgiApplication
-
+from models import Usuario, Musica, Playlist, StreamingService
 from data_loader import get_data_loader
 
-# Instância única de dados usada por todas as operações
+# Data loader instance
 data_loader = get_data_loader()
 
+class UsuarioModel(ComplexModel):
+    id = Unicode
+    nome = Unicode
+    idade = Integer
 
-# class StreamingService(ServiceBase):
-#     """Serviço SOAP com operações do streaming de músicas."""
-#
-#     @rpc(_returns=Array(Usuario))
-#     def listar_todos_usuarios(ctx):
-#         """Retorna todos os usuários cadastrados."""
-#         return data_loader.listar_todos_usuarios()
-#
-#     @rpc(Unicode, _returns=Array(Playlist))
-#     def listar_playlists_usuario(ctx, id_usuario):
-#         """Listar playlists de um usuário específico."""
-#         return data_loader.listar_playlists_usuario(id_usuario)
-#
-#     # Demais operações seguem a mesma ideia: utilizar ``data_loader`` para
-#     # recuperar músicas ou playlists e retornar os objetos SOAP correspondentes.
+class MusicaModel(ComplexModel):
+    id = Unicode
+    nome = Unicode
+    artista = Unicode
+    duracao_segundos = Integer
 
+class PlaylistModel(ComplexModel):
+    id = Unicode
+    nome = Unicode
+    id_usuario = Unicode
+    musicas = Array(Unicode)
 
-def executar_servidor(porta: int = 8002) -> None:
-    """Executa o servidor SOAP.
+class EstatisticasModel(ComplexModel):
+    total_usuarios = Integer
+    total_musicas = Integer
+    total_playlists = Integer
+    media_musicas_por_playlist = Integer
 
-    Esta função deve criar a aplicação ``spyne.Application`` e disponibilizar o
-    WSDL em ``/soap?wsdl``. Ela é deixada como TODO para que os alunos completem
-    conforme a biblioteca escolhida.
-    """
-    # TODO: configurar Application e WsgiApplication
-    # app = Application([...])
-    # wsgi_app = WsgiApplication(app)
-    # from wsgiref.simple_server import make_server
-    # server = make_server("0.0.0.0", porta, wsgi_app)
-    # server.serve_forever()
-    raise NotImplementedError("Implementar servidor SOAP utilizando spyne")
+class StreamingService(ServiceBase):
+    def __init__(self):
+        self.service = StreamingService()
 
+    @rpc(_returns=Array(UsuarioModel))
+    def listar_usuarios(self):
+        """List all users"""
+        usuarios = data_loader.usuarios
+        return [
+            UsuarioModel(
+                id=u["id"],
+                nome=u["nome"],
+                idade=u["idade"]
+            )
+            for u in usuarios
+        ]
 
-if __name__ == "__main__":
+    @rpc(_returns=Array(MusicaModel))
+    def listar_musicas(self):
+        """List all songs"""
+        musicas = data_loader.musicas
+        return [
+            MusicaModel(
+                id=m["id"],
+                nome=m["nome"],
+                artista=m["artista"],
+                duracao_segundos=m["duracaoSegundos"]
+            )
+            for m in musicas
+        ]
+
+    @rpc(_returns=Array(PlaylistModel))
+    def listar_playlists(self):
+        """List all playlists"""
+        playlists = data_loader.playlists
+        return [
+            PlaylistModel(
+                id=p["id"],
+                nome=p["nome"],
+                id_usuario=p["idUsuario"],
+                musicas=p["musicas"]
+            )
+            for p in playlists
+        ]
+
+    @rpc(_returns=EstatisticasModel)
+    def obter_estatisticas(self):
+        """Obtém estatísticas do serviço"""
+        try:
+            stats = self.service.obter_estatisticas()
+            return EstatisticasModel(
+                total_usuarios=stats.total_usuarios,
+                total_musicas=stats.total_musicas,
+                total_playlists=stats.total_playlists,
+                media_musicas_por_playlist=stats.media_musicas_por_playlist
+            )
+        except Exception as e:
+            logger.error(f"Erro ao obter estatísticas: {str(e)}")
+            raise
+
+    @rpc(Unicode, Unicode, Integer, _returns=UsuarioModel)
+    def criar_usuario(self, id, nome, idade):
+        """Cria um novo usuário"""
+        try:
+            usuario = self.service.criar_usuario(id, nome, idade)
+            return UsuarioModel(id=usuario.id, nome=usuario.nome, idade=usuario.idade)
+        except Exception as e:
+            logger.error(f"Erro ao criar usuário: {str(e)}")
+            raise
+
+    @rpc(Unicode, Unicode, Unicode, Integer, _returns=MusicaModel)
+    def criar_musica(self, id, nome, artista, duracao):
+        """Cria uma nova música"""
+        try:
+            musica = self.service.criar_musica(id, nome, artista, duracao)
+            return MusicaModel(id=musica.id, nome=musica.nome, artista=musica.artista, 
+                             duracao_segundos=musica.duracaoSegundos)
+        except Exception as e:
+            logger.error(f"Erro ao criar música: {str(e)}")
+            raise
+
+    @rpc(Unicode, Unicode, Unicode, Array(Unicode), _returns=PlaylistModel)
+    def criar_playlist(self, id, nome, id_usuario, musicas):
+        """Cria uma nova playlist"""
+        try:
+            playlist = self.service.criar_playlist(id, nome, id_usuario, musicas)
+            return PlaylistModel(id=playlist.id, nome=playlist.nome, 
+                               id_usuario=playlist.id_usuario, musicas=playlist.musicas)
+        except Exception as e:
+            logger.error(f"Erro ao criar playlist: {str(e)}")
+            raise
+
+def executar_servidor(host="0.0.0.0", port=8004):
+    """Start the SOAP server"""
+    application = Application(
+        [StreamingService],
+        tns='streaming.soap',
+        name='StreamingService',
+        in_protocol=Soap11(validator='lxml'),
+        out_protocol=Soap11()
+    )
+
+    wsgi_app = WsgiApplication(application)
+    server = make_server(host, port, wsgi_app)
+    print(f"🟡 SOAP: Servidor rodando em http://{host}:{port}/soap")
+    server.serve_forever()
+
+if __name__ == '__main__':
     executar_servidor()

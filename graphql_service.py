@@ -13,20 +13,51 @@ Para executar:
 
 import strawberry
 from strawberry.fastapi import GraphQLRouter
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from typing import List, Optional
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from datetime import datetime
 
-# Loader de dados real utilizado por todos os backends
+# Data loader used by all backends
 from data_loader import get_data_loader
+from dataloaders import GraphQLDataLoaders
 
 # ========== TIPOS GRAPHQL ==========
+
+@dataclass
+class ValidationError(Exception):
+    """Custom validation error for GraphQL"""
+    message: str
+    field: str
+
+def validate_nome(nome: str, field: str = "nome") -> None:
+    """Validates a name field"""
+    if not nome or len(nome.strip()) == 0:
+        raise ValidationError("Nome não pode ser vazio", field)
+    if len(nome) > 100:
+        raise ValidationError("Nome muito longo (máximo 100 caracteres)", field)
+
+def validate_idade(idade: int) -> None:
+    """Validates age field"""
+    if idade < 0 or idade > 120:
+        raise ValidationError("Idade inválida (deve estar entre 0 e 120)", "idade")
+
+def validate_duracao(duracao: int) -> None:
+    """Validates song duration"""
+    if duracao <= 0 or duracao > 3600:
+        raise ValidationError("Duração inválida (deve estar entre 1 e 3600 segundos)", "duracao")
 
 @strawberry.type
 class Usuario:
     id: str
+    nome: str
+    idade: int
+
+@strawberry.input
+class UsuarioInput:
     nome: str
     idade: int
 
@@ -37,12 +68,24 @@ class Musica:
     artista: str
     duracao_segundos: int
 
+@strawberry.input
+class MusicaInput:
+    nome: str
+    artista: str
+    duracao_segundos: int
+
 @strawberry.type
 class Playlist:
     id: str
     nome: str
     id_usuario: str
     musicas: List[str]  # IDs das músicas
+
+@strawberry.input
+class PlaylistInput:
+    nome: str
+    id_usuario: str
+    musicas: List[str]
 
 @strawberry.type
 class PlaylistCompleta:
@@ -60,6 +103,16 @@ class Estatisticas:
     usuarios_com_playlists: int
     media_musicas_por_playlist: float
     tecnologia: str
+
+# ========== CONTEXT ==========
+
+@dataclass
+class GraphQLContext:
+    """GraphQL context with DataLoaders"""
+    loaders: GraphQLDataLoaders
+
+    def __init__(self, loaders: GraphQLDataLoaders):
+        self.loaders = loaders
 
 # ========== DATA LOADER (Simulação) ==========
 
@@ -92,6 +145,29 @@ class GraphQLDataLoader:
         ]
 
         print("✅ GraphQL Data Loader (mock) inicializado")
+        print(f"Loaded {len(self.usuarios)} users, {len(self.musicas)} songs, {len(self.playlists)} playlists")
+        print("Sample playlist data:", self.playlists[0] if self.playlists else "No playlists")
+
+    def get_usuario(self, id: str) -> Optional[dict]:
+        """Get user by ID with error handling"""
+        usuario = next((u for u in self.usuarios if u["id"] == id), None)
+        if not usuario:
+            raise ValidationError(f"Usuário não encontrado: {id}", "id")
+        return usuario
+
+    def get_musica(self, id: str) -> Optional[dict]:
+        """Get music by ID with error handling"""
+        musica = next((m for m in self.musicas if m["id"] == id), None)
+        if not musica:
+            raise ValidationError(f"Música não encontrada: {id}", "id")
+        return musica
+
+    def get_playlist(self, id: str) -> Optional[dict]:
+        """Get playlist by ID with error handling"""
+        playlist = next((p for p in self.playlists if p["id"] == id), None)
+        if not playlist:
+            raise ValidationError(f"Playlist não encontrada: {id}", "id")
+        return playlist
 
 # Instância global: tenta usar dados reais e faz fallback para o mock
 try:
@@ -106,41 +182,19 @@ except Exception as exc:
 
 @strawberry.type
 class Query:
-
     @strawberry.field
-    def usuarios(self) -> List[Usuario]:
-        """
-        Lista todos os usuários.
-
-        Exemplo de query:
-        {
-          usuarios {
-            id
-            nome
-            idade
-          }
-        }
-        """
+    async def usuarios(self, info) -> List[Usuario]:
+        """List all users"""
+        usuarios = info.context["loaders"].data_loader.usuarios
         return [
             Usuario(id=u["id"], nome=u["nome"], idade=u["idade"])
-            for u in data_loader.usuarios
+            for u in usuarios
         ]
 
     @strawberry.field
-    def musicas(self) -> List[Musica]:
-        """
-        Lista todas as músicas.
-
-        Exemplo de query:
-        {
-          musicas {
-            id
-            nome
-            artista
-            duracaoSegundos
-          }
-        }
-        """
+    async def musicas(self, info) -> List[Musica]:
+        """List all songs"""
+        musicas = info.context["loaders"].data_loader.musicas
         return [
             Musica(
                 id=m["id"],
@@ -148,209 +202,135 @@ class Query:
                 artista=m["artista"],
                 duracao_segundos=m["duracaoSegundos"]
             )
-            for m in data_loader.musicas
+            for m in musicas
         ]
 
     @strawberry.field
-    def usuario(self, id: str) -> Optional[Usuario]:
-        """
-        Busca um usuário específico por ID.
-
-        Exemplo de query:
-        {
-          usuario(id: "user1") {
-            id
-            nome
-            idade
-          }
-        }
-        """
-        usuario_data = next((u for u in data_loader.usuarios if u["id"] == id), None)
-        if usuario_data:
+    async def usuario(self, info, id: str) -> Optional[Usuario]:
+        """Get user by ID"""
+        try:
+            usuario_data = await info.context.loaders.get_usuario(id)
             return Usuario(
                 id=usuario_data["id"],
                 nome=usuario_data["nome"],
                 idade=usuario_data["idade"]
             )
-        return None
+        except ValidationError:
+            return None
 
     @strawberry.field
-    def playlists_usuario(self, id_usuario: str) -> List[Playlist]:
-        """
-        Lista playlists de um usuário específico.
-
-        Exemplo de query:
-        {
-          playlistsUsuario(idUsuario: "user1") {
-            id
-            nome
-            musicas
-          }
-        }
-        """
-        playlists_usuario = [
-            p for p in data_loader.playlists if p["idUsuario"] == id_usuario
-        ]
-
-        return [
-            Playlist(
-                id=p["id"],
-                nome=p["nome"],
-                id_usuario=p["idUsuario"],
-                musicas=p["musicas"]
-            )
-            for p in playlists_usuario
-        ]
-
-    @strawberry.field
-    def musicas_playlist(self, id_playlist: str) -> List[Musica]:
-        """
-        Lista músicas de uma playlist específica.
-
-        Exemplo de query:
-        {
-          musicasPlaylist(idPlaylist: "playlist1") {
-            id
-            nome
-            artista
-            duracaoSegundos
-          }
-        }
-        """
-        playlist = next((p for p in data_loader.playlists if p["id"] == id_playlist), None)
-        if not playlist:
+    async def playlists_usuario(self, info, id_usuario: str) -> List[Playlist]:
+        """List playlists for a user"""
+        try:
+            # Get playlists directly from data loader
+            playlists = [
+                p for p in info.context["loaders"].data_loader.playlists 
+                if p["idUsuario"] == id_usuario
+            ]
+            
+            if not playlists:
+                print(f"No playlists found for user {id_usuario}")
+                return []
+            
+            return [
+                Playlist(
+                    id=p["id"],
+                    nome=p["nome"],
+                    id_usuario=p["idUsuario"],
+                    musicas=p["musicas"]
+                )
+                for p in playlists
+            ]
+        except Exception as e:
+            print(f"Error in playlists_usuario resolver: {str(e)}")
             return []
 
-        musicas_playlist = []
-        for id_musica in playlist["musicas"]:
-            musica_data = next((m for m in data_loader.musicas if m["id"] == id_musica), None)
-            if musica_data:
-                musicas_playlist.append(
-                    Musica(
-                        id=musica_data["id"],
-                        nome=musica_data["nome"],
-                        artista=musica_data["artista"],
-                        duracao_segundos=musica_data["duracaoSegundos"]
-                    )
+    @strawberry.field
+    async def musicas_playlist(self, info, id_playlist: str) -> List[Musica]:
+        """List songs in a playlist"""
+        try:
+            playlist = await info.context["loaders"].get_playlist(id_playlist)
+            musicas = await info.context["loaders"].get_musicas(playlist["musicas"])
+            return [
+                Musica(
+                    id=m["id"],
+                    nome=m["nome"],
+                    artista=m["artista"],
+                    duracao_segundos=m["duracaoSegundos"]
                 )
-
-        return musicas_playlist
+                for m in musicas
+            ]
+        except ValidationError:
+            return []
 
     @strawberry.field
-    def playlists_com_musica(self, id_musica: str) -> List[Playlist]:
-        """
-        Lista playlists que contêm uma música específica.
+    async def playlists_com_musica(self, info, id_musica: str) -> List[Playlist]:
+        """List playlists containing a song"""
+        try:
+            await info.context["loaders"].get_musica(id_musica)  # Validate song exists
+            playlists = [
+                p for p in info.context["loaders"].data_loader.playlists 
+                if id_musica in p["musicas"]
+            ]
+            return [
+                Playlist(
+                    id=p["id"],
+                    nome=p["nome"],
+                    id_usuario=p["idUsuario"],
+                    musicas=p["musicas"]
+                )
+                for p in playlists
+            ]
+        except ValidationError:
+            return []
 
-        Exemplo de query:
-        {
-          playlistsComMusica(idMusica: "music1") {
-            id
-            nome
-            idUsuario
-          }
-        }
-        """
-        playlists_com_musica = [
-            p for p in data_loader.playlists if id_musica in p["musicas"]
-        ]
-
-        return [
-            Playlist(
-                id=p["id"],
-                nome=p["nome"],
-                id_usuario=p["idUsuario"],
-                musicas=p["musicas"]
+    @strawberry.field
+    async def playlist_completa(self, info, id_playlist: str) -> Optional[PlaylistCompleta]:
+        """Get playlist with complete data"""
+        try:
+            playlist = await info.context["loaders"].get_playlist(id_playlist)
+            usuario = await info.context["loaders"].get_usuario(playlist["idUsuario"])
+            musicas = await info.context["loaders"].get_musicas(playlist["musicas"])
+            
+            return PlaylistCompleta(
+                id=playlist["id"],
+                nome=playlist["nome"],
+                usuario=Usuario(
+                    id=usuario["id"],
+                    nome=usuario["nome"],
+                    idade=usuario["idade"]
+                ),
+                musicas=[
+                    Musica(
+                        id=m["id"],
+                        nome=m["nome"],
+                        artista=m["artista"],
+                        duracao_segundos=m["duracaoSegundos"]
+                    )
+                    for m in musicas
+                ]
             )
-            for p in playlists_com_musica
-        ]
-
-    @strawberry.field
-    def playlist_completa(self, id_playlist: str) -> Optional[PlaylistCompleta]:
-        """
-        Busca uma playlist com dados completos (usuário e músicas).
-        Demonstra a capacidade do GraphQL de buscar dados relacionados em uma query.
-
-        Exemplo de query:
-        {
-          playlistCompleta(idPlaylist: "playlist1") {
-            id
-            nome
-            usuario {
-              id
-              nome
-              idade
-            }
-            musicas {
-              id
-              nome
-              artista
-              duracaoSegundos
-            }
-          }
-        }
-        """
-        playlist_data = next((p for p in data_loader.playlists if p["id"] == id_playlist), None)
-        if not playlist_data:
+        except ValidationError:
             return None
 
-        # Buscar dados do usuário
-        usuario_data = next((u for u in data_loader.usuarios if u["id"] == playlist_data["idUsuario"]), None)
-        if not usuario_data:
-            return None
-
-        usuario = Usuario(
-            id=usuario_data["id"],
-            nome=usuario_data["nome"],
-            idade=usuario_data["idade"]
-        )
-
-        # Buscar dados das músicas
-        musicas = []
-        for id_musica in playlist_data["musicas"]:
-            musica_data = next((m for m in data_loader.musicas if m["id"] == id_musica), None)
-            if musica_data:
-                musicas.append(
-                    Musica(
-                        id=musica_data["id"],
-                        nome=musica_data["nome"],
-                        artista=musica_data["artista"],
-                        duracao_segundos=musica_data["duracaoSegundos"]
-                    )
-                )
-
-        return PlaylistCompleta(
-            id=playlist_data["id"],
-            nome=playlist_data["nome"],
-            usuario=usuario,
-            musicas=musicas
-        )
-
     @strawberry.field
-    def estatisticas(self) -> Estatisticas:
-        """
-        Retorna estatísticas gerais do serviço.
-
-        Exemplo de query:
-        {
-          estatisticas {
-            totalUsuarios
-            totalMusicas
-            totalPlaylists
-            usuariosComPlaylists
-            mediaMusicasPorPlaylist
-            tecnologia
-          }
-        }
-        """
-        total_musicas_em_playlists = sum(len(p["musicas"]) for p in data_loader.playlists)
-        usuarios_com_playlists = len(set(p["idUsuario"] for p in data_loader.playlists))
+    async def estatisticas(self, info) -> Estatisticas:
+        """Get service statistics"""
+        total_musicas_em_playlists = sum(
+            len(p["musicas"]) 
+            for p in info.context["loaders"].data_loader.playlists
+        )
+        usuarios_com_playlists = len(set(
+            p["idUsuario"] 
+            for p in info.context["loaders"].data_loader.playlists
+        ))
 
         return Estatisticas(
-            total_usuarios=len(data_loader.usuarios),
-            total_musicas=len(data_loader.musicas),
-            total_playlists=len(data_loader.playlists),
+            total_usuarios=len(info.context["loaders"].data_loader.usuarios),
+            total_musicas=len(info.context["loaders"].data_loader.musicas),
+            total_playlists=len(info.context["loaders"].data_loader.playlists),
             usuarios_com_playlists=usuarios_com_playlists,
-            media_musicas_por_playlist=total_musicas_em_playlists / len(data_loader.playlists) if data_loader.playlists else 0,
+            media_musicas_por_playlist=total_musicas_em_playlists / len(info.context["loaders"].data_loader.playlists) if info.context["loaders"].data_loader.playlists else 0,
             tecnologia="GraphQL"
         )
 
@@ -360,24 +340,173 @@ class Query:
 class Mutation:
 
     @strawberry.mutation
-    def criar_usuario(self, nome: str, idade: int) -> Usuario:
-        """
-        Cria um novo usuário.
+    def criar_usuario(self, input: UsuarioInput) -> Usuario:
+        """Creates a new user with validation"""
+        try:
+            validate_nome(input.nome)
+            validate_idade(input.idade)
+            
+            novo_id = f"user{len(data_loader.usuarios) + 1}"
+            novo_usuario = {
+                "id": novo_id,
+                "nome": input.nome,
+                "idade": input.idade
+            }
+            data_loader.usuarios.append(novo_usuario)
+            
+            return Usuario(**novo_usuario)
+        except ValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
-        Exemplo de mutation:
-        mutation {
-          criarUsuario(nome: "Novo Usuário", idade: 25) {
-            id
-            nome
-            idade
-          }
-        }
-        """
-        novo_id = f"user{len(data_loader.usuarios) + 1}"
-        novo_usuario = {"id": novo_id, "nome": nome, "idade": idade}
-        data_loader.usuarios.append(novo_usuario)
+    @strawberry.mutation
+    def criar_musica(self, input: MusicaInput) -> Musica:
+        """Creates a new song with validation"""
+        try:
+            validate_nome(input.nome, "nome")
+            validate_nome(input.artista, "artista")
+            validate_duracao(input.duracao_segundos)
+            
+            novo_id = f"music{len(data_loader.musicas) + 1}"
+            nova_musica = {
+                "id": novo_id,
+                "nome": input.nome,
+                "artista": input.artista,
+                "duracaoSegundos": input.duracao_segundos
+            }
+            data_loader.musicas.append(nova_musica)
+            
+            return Musica(**nova_musica)
+        except ValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
-        return Usuario(id=novo_id, nome=nome, idade=idade)
+    @strawberry.mutation
+    def criar_playlist(self, input: PlaylistInput) -> Playlist:
+        """Creates a new playlist with validation"""
+        try:
+            validate_nome(input.nome)
+            
+            # Validate user exists
+            data_loader.get_usuario(input.id_usuario)
+            
+            # Validate all music IDs exist
+            for id_musica in input.musicas:
+                data_loader.get_musica(id_musica)
+            
+            novo_id = f"playlist{len(data_loader.playlists) + 1}"
+            nova_playlist = {
+                "id": novo_id,
+                "nome": input.nome,
+                "idUsuario": input.id_usuario,
+                "musicas": input.musicas
+            }
+            data_loader.playlists.append(nova_playlist)
+            
+            return Playlist(**nova_playlist)
+        except ValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @strawberry.mutation
+    def atualizar_usuario(self, id: str, input: UsuarioInput) -> Usuario:
+        """Updates an existing user with validation"""
+        try:
+            validate_nome(input.nome)
+            validate_idade(input.idade)
+            
+            usuario = data_loader.get_usuario(id)
+            usuario.update({
+                "nome": input.nome,
+                "idade": input.idade
+            })
+            
+            return Usuario(**usuario)
+        except ValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @strawberry.mutation
+    def atualizar_musica(self, id: str, input: MusicaInput) -> Musica:
+        """Updates an existing song with validation"""
+        try:
+            validate_nome(input.nome, "nome")
+            validate_nome(input.artista, "artista")
+            validate_duracao(input.duracao_segundos)
+            
+            musica = data_loader.get_musica(id)
+            musica.update({
+                "nome": input.nome,
+                "artista": input.artista,
+                "duracaoSegundos": input.duracao_segundos
+            })
+            
+            return Musica(**musica)
+        except ValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @strawberry.mutation
+    def atualizar_playlist(self, id: str, input: PlaylistInput) -> Playlist:
+        """Updates an existing playlist with validation"""
+        try:
+            validate_nome(input.nome)
+            
+            # Validate user exists
+            data_loader.get_usuario(input.id_usuario)
+            
+            # Validate all music IDs exist
+            for id_musica in input.musicas:
+                data_loader.get_musica(id_musica)
+            
+            playlist = data_loader.get_playlist(id)
+            playlist.update({
+                "nome": input.nome,
+                "idUsuario": input.id_usuario,
+                "musicas": input.musicas
+            })
+            
+            return Playlist(**playlist)
+        except ValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @strawberry.mutation
+    def deletar_usuario(self, id: str) -> bool:
+        """Deletes a user and their playlists"""
+        try:
+            usuario = data_loader.get_usuario(id)
+            data_loader.usuarios.remove(usuario)
+            
+            # Remove user's playlists
+            data_loader.playlists = [
+                p for p in data_loader.playlists 
+                if p["idUsuario"] != id
+            ]
+            
+            return True
+        except ValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @strawberry.mutation
+    def deletar_musica(self, id: str) -> bool:
+        """Deletes a song and removes it from all playlists"""
+        try:
+            musica = data_loader.get_musica(id)
+            data_loader.musicas.remove(musica)
+            
+            # Remove song from all playlists
+            for playlist in data_loader.playlists:
+                if id in playlist["musicas"]:
+                    playlist["musicas"].remove(id)
+            
+            return True
+        except ValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @strawberry.mutation
+    def deletar_playlist(self, id: str) -> bool:
+        """Deletes a playlist"""
+        try:
+            playlist = data_loader.get_playlist(id)
+            data_loader.playlists.remove(playlist)
+            return True
+        except ValidationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
 # ========== SCHEMA GRAPHQL ==========
 
@@ -408,7 +537,14 @@ app.add_middleware(
 )
 
 # Adicionar router GraphQL
-graphql_app = GraphQLRouter(schema, graphiql=True)
+async def get_context():
+    return {"loaders": GraphQLDataLoaders(data_loader)}
+
+graphql_app = GraphQLRouter(
+    schema,
+    graphiql=True,
+    context_getter=get_context
+)
 app.include_router(graphql_app, prefix="/graphql")
 
 # ========== PÁGINA INICIAL ==========

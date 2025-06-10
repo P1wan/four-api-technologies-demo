@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste da API REST - Serviço de Streaming</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .endpoint-card {
+            transition: all 0.3s ease;
+        }
+        .endpoint-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .response-area {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .nav-tabs .nav-link {
+            color: #495057;
+        }
+        .nav-tabs .nav-link.active {
+            color: #0d6efd;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <h1 class="mb-4 text-center">
+            <i class="bi bi-music-note-beamed"></i>
+            Teste da API REST - Serviço de Streaming
+        </h1>
+
+        <!-- Status do Servidor -->
+        <div class="alert alert-info" role="alert">
+            <i class="bi bi-info-circle"></i>
+            Status do Servidor: <span id="serverStatus">Verificando...</span>
+        </div>
+
+        <!-- Tabs de Navegação -->
+        <ul class="nav nav-tabs mb-4" id="apiTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="usuarios-tab" data-bs-toggle="tab" href="#usuarios" role="tab">
+                    <i class="bi bi-people"></i> Usuários
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="musicas-tab" data-bs-toggle="tab" href="#musicas" role="tab">
+                    <i class="bi bi-music-note"></i> Músicas
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="playlists-tab" data-bs-toggle="tab" href="#playlists" role="tab">
+                    <i class="bi bi-collection-play"></i> Playlists
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="estatisticas-tab" data-bs-toggle="tab" href="#estatisticas" role="tab">
+                    <i class="bi bi-graph-up"></i> Estatísticas
+                </a>
+            </li>
+        </ul>
+
+        <!-- Conteúdo das Tabs -->
+        <div class="tab-content" id="apiTabsContent">
+            <!-- Tab Usuários -->
+            <div class="tab-pane fade show active" id="usuarios" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Criar Usuário</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="criarUsuarioForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nome</label>
+                                        <input type="text" class="form-control" name="nome" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Idade</label>
+                                        <input type="number" class="form-control" name="idade" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Criar
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Listar Usuários</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Página</label>
+                                    <input type="number" class="form-control" id="usuariosPage" value="1" min="1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Itens por Página</label>
+                                    <input type="number" class="form-control" id="usuariosPageSize" value="10" min="1" max="100">
+                                </div>
+                                <button class="btn btn-primary" onclick="listarUsuarios()">
+                                    <i class="bi bi-list"></i> Listar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Resposta</h5>
+                    </div>
+                    <div class="card-body">
+                        <pre class="response-area bg-light p-3 rounded" id="usuariosResponse"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Músicas -->
+            <div class="tab-pane fade" id="musicas" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Criar Música</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="criarMusicaForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nome</label>
+                                        <input type="text" class="form-control" name="nome" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Artista</label>
+                                        <input type="text" class="form-control" name="artista" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Duração (segundos)</label>
+                                        <input type="number" class="form-control" name="duracaoSegundos" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Criar
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Listar Músicas</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Página</label>
+                                    <input type="number" class="form-control" id="musicasPage" value="1" min="1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Itens por Página</label>
+                                    <input type="number" class="form-control" id="musicasPageSize" value="10" min="1" max="100">
+                                </div>
+                                <button class="btn btn-primary" onclick="listarMusicas()">
+                                    <i class="bi bi-list"></i> Listar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Resposta</h5>
+                    </div>
+                    <div class="card-body">
+                        <pre class="response-area bg-light p-3 rounded" id="musicasResponse"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Playlists -->
+            <div class="tab-pane fade" id="playlists" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Criar Playlist</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="criarPlaylistForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nome</label>
+                                        <input type="text" class="form-control" name="nome" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">ID do Usuário</label>
+                                        <input type="text" class="form-control" name="idUsuario" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">IDs das Músicas (separados por vírgula)</label>
+                                        <input type="text" class="form-control" name="musicas">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Criar
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Listar Playlists</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Página</label>
+                                    <input type="number" class="form-control" id="playlistsPage" value="1" min="1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Itens por Página</label>
+                                    <input type="number" class="form-control" id="playlistsPageSize" value="10" min="1" max="100">
+                                </div>
+                                <button class="btn btn-primary" onclick="listarPlaylists()">
+                                    <i class="bi bi-list"></i> Listar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Resposta</h5>
+                    </div>
+                    <div class="card-body">
+                        <pre class="response-area bg-light p-3 rounded" id="playlistsResponse"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Estatísticas -->
+            <div class="tab-pane fade" id="estatisticas" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Estatísticas do Serviço</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-primary mb-3" onclick="obterEstatisticas()">
+                            <i class="bi bi-graph-up"></i> Obter Estatísticas
+                        </button>
+                        <pre class="response-area bg-light p-3 rounded" id="estatisticasResponse"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="client.js"></script>
+    <script>
+        // Instância do cliente REST
+        const client = new RestClient();
+
+        // Verificar status do servidor
+        async function verificarStatusServidor() {
+            try {
+                await client.obterEstatisticas();
+                document.getElementById('serverStatus').innerHTML = 
+                    '<span class="text-success"><i class="bi bi-check-circle"></i> Online</span>';
+            } catch (error) {
+                document.getElementById('serverStatus').innerHTML = 
+                    '<span class="text-danger"><i class="bi bi-x-circle"></i> Offline</span>';
+            }
+        }
+
+        // Funções para Usuários
+        document.getElementById('criarUsuarioForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            try {
+                const response = await client.criarUsuario(
+                    formData.get('nome'),
+                    parseInt(formData.get('idade'))
+                );
+                document.getElementById('usuariosResponse').textContent = 
+                    JSON.stringify(response, null, 2);
+            } catch (error) {
+                document.getElementById('usuariosResponse').textContent = 
+                    `Erro: ${error.message}`;
+            }
+        });
+
+        async function listarUsuarios() {
+            try {
+                const page = parseInt(document.getElementById('usuariosPage').value);
+                const pageSize = parseInt(document.getElementById('usuariosPageSize').value);
+                const response = await client.listarUsuarios(page, pageSize);
+                document.getElementById('usuariosResponse').textContent = 
+                    JSON.stringify(response, null, 2);
+            } catch (error) {
+                document.getElementById('usuariosResponse').textContent = 
+                    `Erro: ${error.message}`;
+            }
+        }
+
+        // Funções para Músicas
+        document.getElementById('criarMusicaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            try {
+                const response = await client.criarMusica(
+                    formData.get('nome'),
+                    formData.get('artista'),
+                    parseInt(formData.get('duracaoSegundos'))
+                );
+                document.getElementById('musicasResponse').textContent = 
+                    JSON.stringify(response, null, 2);
+            } catch (error) {
+                document.getElementById('musicasResponse').textContent = 
+                    `Erro: ${error.message}`;
+            }
+        });
+
+        async function listarMusicas() {
+            try {
+                const page = parseInt(document.getElementById('musicasPage').value);
+                const pageSize = parseInt(document.getElementById('musicasPageSize').value);
+                const response = await client.listarMusicas(page, pageSize);
+                document.getElementById('musicasResponse').textContent = 
+                    JSON.stringify(response, null, 2);
+            } catch (error) {
+                document.getElementById('musicasResponse').textContent = 
+                    `Erro: ${error.message}`;
+            }
+        }
+
+        // Funções para Playlists
+        document.getElementById('criarPlaylistForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            try {
+                const musicas = formData.get('musicas')
+                    ? formData.get('musicas').split(',').map(id => id.trim())
+                    : [];
+                const response = await client.criarPlaylist(
+                    formData.get('nome'),
+                    formData.get('idUsuario'),
+                    musicas
+                );
+                document.getElementById('playlistsResponse').textContent = 
+                    JSON.stringify(response, null, 2);
+            } catch (error) {
+                document.getElementById('playlistsResponse').textContent = 
+                    `Erro: ${error.message}`;
+            }
+        });
+
+        async function listarPlaylists() {
+            try {
+                const page = parseInt(document.getElementById('playlistsPage').value);
+                const pageSize = parseInt(document.getElementById('playlistsPageSize').value);
+                const response = await client.listarPlaylists(page, pageSize);
+                document.getElementById('playlistsResponse').textContent = 
+                    JSON.stringify(response, null, 2);
+            } catch (error) {
+                document.getElementById('playlistsResponse').textContent = 
+                    `Erro: ${error.message}`;
+            }
+        }
+
+        // Função para Estatísticas
+        async function obterEstatisticas() {
+            try {
+                const response = await client.obterEstatisticas();
+                document.getElementById('estatisticasResponse').textContent = 
+                    JSON.stringify(response, null, 2);
+            } catch (error) {
+                document.getElementById('estatisticasResponse').textContent = 
+                    `Erro: ${error.message}`;
+            }
+        }
+
+        // Verificar status do servidor ao carregar a página
+        verificarStatusServidor();
+    </script>
+</body>
+</html> 

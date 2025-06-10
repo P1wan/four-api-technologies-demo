@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphQL Client - Streaming Service</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/graphiql/graphiql.min.css" rel="stylesheet">
+    <style>
+        .query-editor {
+            height: 300px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .response-viewer {
+            height: 300px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: monospace;
+        }
+        .metrics {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .nav-tabs .nav-link {
+            color: #6f42c1;
+        }
+        .nav-tabs .nav-link.active {
+            color: #6f42c1;
+            font-weight: bold;
+        }
+        .btn-purple {
+            background-color: #6f42c1;
+            color: white;
+        }
+        .btn-purple:hover {
+            background-color: #5a32a3;
+            color: white;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .status-online {
+            background-color: #28a745;
+        }
+        .status-offline {
+            background-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">GraphQL Client - Streaming Service</h1>
+        
+        <!-- Status Bar -->
+        <div class="alert alert-info d-flex justify-content-between align-items-center">
+            <div>
+                <span class="status-indicator" id="serverStatus"></span>
+                <span id="statusText">Verificando status do servidor...</span>
+            </div>
+            <div class="metrics">
+                <small>
+                    Requisições: <span id="requestCount">0</span> |
+                    Tempo Médio: <span id="avgTime">0ms</span> |
+                    Erros: <span id="errorCount">0</span>
+                </small>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Query Editor -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs card-header-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#queryTab">Query</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#mutationTab">Mutation</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content">
+                            <!-- Query Tab -->
+                            <div class="tab-pane fade show active" id="queryTab">
+                                <div class="mb-3">
+                                    <label class="form-label">Query</label>
+                                    <textarea class="form-control query-editor" id="queryEditor">{
+  usuarios {
+    id
+    nome
+    idade
+  }
+}</textarea>
+                                </div>
+                                <button class="btn btn-purple" onclick="executeQuery()">Executar Query</button>
+                            </div>
+                            
+                            <!-- Mutation Tab -->
+                            <div class="tab-pane fade" id="mutationTab">
+                                <div class="mb-3">
+                                    <label class="form-label">Mutation</label>
+                                    <textarea class="form-control query-editor" id="mutationEditor">mutation {
+  criarUsuario(input: {
+    nome: "Novo Usuário",
+    idade: 25
+  }) {
+    id
+    nome
+    idade
+  }
+}</textarea>
+                                </div>
+                                <button class="btn btn-purple" onclick="executeMutation()">Executar Mutation</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Response Viewer -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Resposta</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="response-viewer" id="responseViewer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Example Queries -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Exemplos de Queries</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h6>Listar Usuários</h6>
+                                        <pre class="mb-2"><code>{
+  usuarios {
+    id
+    nome
+    idade
+  }
+}</code></pre>
+                                        <button class="btn btn-sm btn-outline-purple" onclick="loadExample('usuarios')">Carregar</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h6>Playlist Completa</h6>
+                                        <pre class="mb-2"><code>{
+  playlistCompleta(idPlaylist: "playlist1") {
+    id
+    nome
+    usuario {
+      nome
+    }
+    musicas {
+      nome
+      artista
+    }
+  }
+}</code></pre>
+                                        <button class="btn btn-sm btn-outline-purple" onclick="loadExample('playlist')">Carregar</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h6>Estatísticas</h6>
+                                        <pre class="mb-2"><code>{
+  estatisticas {
+    totalUsuarios
+    totalMusicas
+    totalPlaylists
+    mediaMusicasPorPlaylist
+  }
+}</code></pre>
+                                        <button class="btn btn-sm btn-outline-purple" onclick="loadExample('estatisticas')">Carregar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="client.js"></script>
+</body>
+</html> 

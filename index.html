@@ -3,966 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cliente JavaScript - Comparação de APIs</title>
+    <title>Comparação de Tecnologias de Invocação Remota</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            font-family: 'Courier New', monospace;
-            margin: 20px;
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-            line-height: 1.4;
+            background-color: #f8f9fa;
         }
-
-        .header {
-            border-bottom: 2px solid #007acc;
-            padding-bottom: 15px;
+        .card {
+            transition: transform 0.2s;
             margin-bottom: 20px;
         }
-
-        h1 {
-            color: #569cd6;
-            margin: 0;
-            font-size: 24px;
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-
-        .subtitle {
-            color: #9cdcfe;
-            margin: 5px 0;
-            font-size: 14px;
+        .tech-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
         }
-
-        .tech-section {
-            margin: 20px 0;
-            border: 1px solid #3c3c3c;
-            border-radius: 4px;
-            background-color: #252526;
-        }
-
-        .tech-header {
-            background-color: #2d2d30;
-            padding: 10px 15px;
-            border-bottom: 1px solid #3c3c3c;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .tech-title {
-            color: #4ec9b0;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        .status {
-            padding: 3px 8px;
-            border-radius: 3px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .status.ready { background-color: #198754; color: white; }
-        .status.demo { background-color: #fd7e14; color: white; }
-
-        .tech-content {
-            padding: 15px;
-        }
-
-        .operations {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        button {
-            background-color: #0e639c;
+        .header {
+            background: linear-gradient(135deg, #6c5ce7, #a8a4e6);
             color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 12px;
-        }
-
-        button:hover {
-            background-color: #1177bb;
-        }
-
-        button:disabled {
-            background-color: #6c757d;
-            cursor: not-allowed;
-        }
-
-        .response-area {
-            margin-top: 15px;
-            background-color: #1e1e1e;
-            border: 1px solid #3c3c3c;
-            border-radius: 3px;
-            padding: 10px;
-            min-height: 100px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .response-content {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            white-space: pre-wrap;
-            color: #ce9178;
-        }
-
-        .loading {
-            color: #ffcc02;
-        }
-
-        .error {
-            color: #f14c4c;
-        }
-
-        .success {
-            color: #4ec9b0;
-        }
-
-        .metrics {
-            display: flex;
-            gap: 20px;
-            margin-top: 10px;
-            font-size: 12px;
-            color: #9cdcfe;
-        }
-
-        .metric {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .metric-value {
-            font-size: 16px;
-            font-weight: bold;
-            color: #4ec9b0;
-        }
-
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 12px;
-        }
-
-        .comparison-table th,
-        .comparison-table td {
-            border: 1px solid #3c3c3c;
-            padding: 8px;
-            text-align: center;
-        }
-
-        .comparison-table th {
-            background-color: #2d2d30;
-            color: #4ec9b0;
-        }
-
-        .footer {
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 1px solid #3c3c3c;
-            font-size: 12px;
-            color: #808080;
-            text-align: center;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Cliente JavaScript - Comparação de APIs</h1>
-        <p class="subtitle">Demonstração de invocação remota: REST, GraphQL, SOAP, gRPC</p>
-        <p class="subtitle">Status do Backend: <span id="backend-status">Verificando...</span></p>
-    </div>
-
-    <!-- REST Section -->
-    <div class="tech-section">
-        <div class="tech-header">
-            <span class="tech-title">🔵 REST API</span>
-            <span class="status ready">FUNCIONAL</span>
-        </div>
-        <div class="tech-content">
-            <div class="operations">
-                <button onclick="restClient.listarUsuarios()">Listar Usuários</button>
-                <button onclick="restClient.listarMusicas()">Listar Músicas</button>
-                <button onclick="restClient.listarPlaylistsUsuario('user1')">Playlists Usuário</button>
-                <button onclick="restClient.listarMusicasPlaylist('playlist1')">Músicas Playlist</button>
-                <button onclick="restClient.listarPlaylistsComMusica('music1')">Playlists c/ Música</button>
-            </div>
-            <div class="metrics">
-                <div class="metric">
-                    <span class="metric-value" id="rest-requests">0</span>
-                    <span>Requisições</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-value" id="rest-avg-time">-</span>
-                    <span>Tempo Médio (ms)</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-value" id="rest-errors">0</span>
-                    <span>Erros</span>
-                </div>
-            </div>
-            <div class="response-area">
-                <div class="response-content" id="rest-response">Clique em uma operação para ver a resposta...</div>
-            </div>
+    <div class="header text-center">
+        <div class="container">
+            <h1 class="display-4">Comparação de Tecnologias de Invocação Remota</h1>
+            <p class="lead">Demonstração prática de REST, GraphQL e gRPC</p>
         </div>
     </div>
 
-    <!-- GraphQL Section -->
-    <div class="tech-section">
-        <div class="tech-header">
-            <span class="tech-title">🟣 GraphQL</span>
-            <span class="status ready">FUNCIONAL</span>
-        </div>
-        <div class="tech-content">
-            <div class="operations">
-                <button onclick="graphqlClient.listarUsuarios()">Query: Usuários</button>
-                <button onclick="graphqlClient.listarMusicas()">Query: Músicas</button>
-                <button onclick="graphqlClient.playlistsUsuario('user1')">Query: Playlists</button>
-                <button onclick="graphqlClient.playlistCompleta('playlist1')">Query: Playlist Completa</button>
-                <button onclick="graphqlClient.estatisticas()">Query: Estatísticas</button>
-            </div>
-            <div class="metrics">
-                <div class="metric">
-                    <span class="metric-value" id="graphql-requests">0</span>
-                    <span>Queries</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-value" id="graphql-avg-time">-</span>
-                    <span>Tempo Médio (ms)</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-value" id="graphql-errors">0</span>
-                    <span>Erros</span>
+    <div class="container">
+        <div class="row">
+            <!-- REST API -->
+            <div class="col-md-4">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <div class="tech-icon text-primary">🔵</div>
+                        <h3 class="card-title">REST API</h3>
+                        <p class="card-text">
+                            Interface REST completa com Swagger UI para documentação interativa.
+                            Teste todos os endpoints e veja as respostas em tempo real.
+                        </p>
+                        <a href="/rest" class="btn btn-primary">Acessar Interface REST</a>
+                    </div>
                 </div>
             </div>
-            <div class="response-area">
-                <div class="response-content" id="graphql-response">Execute uma query para ver a resposta...</div>
-            </div>
-        </div>
-    </div>
 
-    <!-- SOAP Section -->
-    <div class="tech-section">
-        <div class="tech-header">
-            <span class="tech-title">🟡 SOAP</span>
-            <span class="status demo">DEMONSTRAÇÃO</span>
+            <!-- GraphQL -->
+            <div class="col-md-4">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <div class="tech-icon text-purple">🟣</div>
+                        <h3 class="card-title">GraphQL</h3>
+                        <p class="card-text">
+                            Interface GraphQL com GraphiQL para construção e teste de queries.
+                            Experimente a flexibilidade de consultas sob demanda.
+                        </p>
+                        <a href="/graphql" class="btn btn-purple" style="background-color: #6f42c1; color: white;">Acessar Interface GraphQL</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- gRPC -->
+            <div class="col-md-4">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <div class="tech-icon text-success">🟢</div>
+                        <h3 class="card-title">gRPC</h3>
+                        <p class="card-text">
+                            Interface gRPC com suporte a streaming e alta performance.
+                            Teste chamadas remotas via gRPC-Web.
+                        </p>
+                        <a href="/grpc" class="btn btn-success">Acessar Interface gRPC</a>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="tech-content">
-            <div class="operations">
-                <button onclick="soapClient.listarUsuarios()">SOAP: Listar Usuários</button>
-                <button onclick="soapClient.listarMusicas()">SOAP: Listar Músicas</button>
-                <button onclick="soapClient.mostrarWSDL()">Mostrar WSDL</button>
-                <button onclick="soapClient.mostrarEnvelope()">Exemplo Envelope</button>
-                <button onclick="soapClient.explicarSOAP()">Explicar SOAP</button>
-            </div>
-            <div class="metrics">
-                <div class="metric">
-                    <span class="metric-value" id="soap-requests">0</span>
-                    <span>Operações</span>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Sobre o Projeto</h4>
+                        <p class="card-text">
+                            Este projeto demonstra diferentes tecnologias de invocação remota em um sistema de streaming de música.
+                            Cada tecnologia é implementada com suas próprias características e benefícios:
+                        </p>
+                        <ul>
+                            <li><strong>REST:</strong> Interface simples e documentada com Swagger UI</li>
+                            <li><strong>GraphQL:</strong> Queries flexíveis e precisas com GraphiQL</li>
+                            <li><strong>gRPC:</strong> Alta performance e streaming com gRPC-Web</li>
+                        </ul>
+                    </div>
                 </div>
-                <div class="metric">
-                    <span class="metric-value">XML</span>
-                    <span>Formato</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-value">WSDL</span>
-                    <span>Contrato</span>
-                </div>
-            </div>
-            <div class="response-area">
-                <div class="response-content" id="soap-response">Clique para ver demonstração SOAP...</div>
             </div>
         </div>
     </div>
 
-    <!-- gRPC Section -->
-    <div class="tech-section">
-        <div class="tech-header">
-            <span class="tech-title">🟢 gRPC</span>
-            <span class="status demo">DEMONSTRAÇÃO</span>
+    <footer class="bg-light text-center text-muted py-4 mt-5">
+        <div class="container">
+            <p class="mb-0">Trabalho de Computação Distribuída - 2025</p>
         </div>
-        <div class="tech-content">
-            <div class="operations">
-                <button onclick="grpcClient.listarUsuarios()">gRPC: Listar Usuários</button>
-                <button onclick="grpcClient.listarMusicas()">gRPC: Listar Músicas</button>
-                <button onclick="grpcClient.mostrarProto()">Mostrar .proto</button>
-                <button onclick="grpcClient.exemploStreaming()">Exemplo Streaming</button>
-                <button onclick="grpcClient.explicarGRPC()">Explicar gRPC</button>
-            </div>
-            <div class="metrics">
-                <div class="metric">
-                    <span class="metric-value" id="grpc-requests">0</span>
-                    <span>RPCs</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-value">BINÁRIO</span>
-                    <span>Formato</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-value">HTTP/2</span>
-                    <span>Protocolo</span>
-                </div>
-            </div>
-            <div class="response-area">
-                <div class="response-content" id="grpc-response">Clique para ver demonstração gRPC...</div>
-            </div>
-        </div>
-    </div>
+    </footer>
 
-    <!-- Comparison Table -->
-    <div class="tech-section">
-        <div class="tech-header">
-            <span class="tech-title">📊 Comparação de Performance</span>
-            <span class="status ready">TEMPO REAL</span>
-        </div>
-        <div class="tech-content">
-            <table class="comparison-table">
-                <thead>
-                    <tr>
-                        <th>Tecnologia</th>
-                        <th>Requisições</th>
-                        <th>Tempo Médio (ms)</th>
-                        <th>Erros</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>REST</td>
-                        <td id="table-rest-requests">0</td>
-                        <td id="table-rest-time">-</td>
-                        <td id="table-rest-errors">0</td>
-                        <td>🟢 Ativo</td>
-                    </tr>
-                    <tr>
-                        <td>GraphQL</td>
-                        <td id="table-graphql-requests">0</td>
-                        <td id="table-graphql-time">-</td>
-                        <td id="table-graphql-errors">0</td>
-                        <td>🟢 Ativo</td>
-                    </tr>
-                    <tr>
-                        <td>SOAP</td>
-                        <td id="table-soap-requests">0</td>
-                        <td>~180</td>
-                        <td>0</td>
-                        <td>🟡 Demo</td>
-                    </tr>
-                    <tr>
-                        <td>gRPC</td>
-                        <td id="table-grpc-requests">0</td>
-                        <td>~28</td>
-                        <td>0</td>
-                        <td>🟡 Demo</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="footer">
-        <p>Cliente JavaScript implementado para demonstração das 4 tecnologias de invocação remota</p>
-        <p>Backend rodando em: <span id="backend-urls">Verificando...</span></p>
-    </div>
-
-    <script>
-        // Configuração base
-        const config = {
-            restURL: window.location.origin.replace(':8080', ':8000'),
-            graphqlURL: window.location.origin.replace(':8080', ':8001') + '/graphql',
-            soapURL: window.location.origin.replace(':8080', ':8002'),
-            grpcURL: 'localhost:50051' // Conceitual
-        };
-
-        // Métricas globais
-        const metrics = {
-            rest: { requests: 0, totalTime: 0, errors: 0 },
-            graphql: { requests: 0, totalTime: 0, errors: 0 },
-            soap: { requests: 0, totalTime: 0, errors: 0 },
-            grpc: { requests: 0, totalTime: 0, errors: 0 }
-        };
-
-        // Utilitários
-        function updateMetrics(tech, time, error = false) {
-            metrics[tech].requests++;
-            if (!error) {
-                metrics[tech].totalTime += time;
-            } else {
-                metrics[tech].errors++;
-            }
-
-            const avgTime = metrics[tech].totalTime / (metrics[tech].requests - metrics[tech].errors);
-
-            document.getElementById(`${tech}-requests`).textContent = metrics[tech].requests;
-            document.getElementById(`${tech}-avg-time`).textContent = 
-                isNaN(avgTime) ? '-' : Math.round(avgTime);
-            document.getElementById(`${tech}-errors`).textContent = metrics[tech].errors;
-
-            // Atualizar tabela
-            document.getElementById(`table-${tech}-requests`).textContent = metrics[tech].requests;
-            if (!isNaN(avgTime)) {
-                document.getElementById(`table-${tech}-time`).textContent = Math.round(avgTime);
-            }
-            document.getElementById(`table-${tech}-errors`).textContent = metrics[tech].errors;
-        }
-
-        function displayResponse(tech, data, time, error = false) {
-            const responseDiv = document.getElementById(`${tech}-response`);
-            const timestamp = new Date().toLocaleTimeString();
-
-            if (error) {
-                responseDiv.innerHTML = `<span class="error">[${timestamp}] ERRO: ${data}</span>`;
-            } else {
-                const formattedData = typeof data === 'object' ? 
-                    JSON.stringify(data, null, 2) : data;
-                responseDiv.innerHTML = `<span class="success">[${timestamp}] Resposta (${time}ms):</span>\n${formattedData}`;
-            }
-
-            updateMetrics(tech, time, error);
-        }
-
-        function showLoading(tech) {
-            const responseDiv = document.getElementById(`${tech}-response`);
-            responseDiv.innerHTML = '<span class="loading">⏳ Executando requisição...</span>';
-        }
-
-        // Cliente REST
-        class RESTClient {
-            constructor(baseURL) {
-                this.baseURL = baseURL;
-            }
-
-            async makeRequest(endpoint, description) {
-                showLoading('rest');
-                const startTime = performance.now();
-
-                try {
-                    const response = await fetch(`${this.baseURL}${endpoint}`);
-                    const data = await response.json();
-                    const endTime = performance.now();
-                    const duration = Math.round(endTime - startTime);
-
-                    displayResponse('rest', {
-                        operacao: description,
-                        endpoint: endpoint,
-                        status: response.status,
-                        dados: Array.isArray(data) ? 
-                            `${data.length} registros encontrados` : data,
-                        amostra: Array.isArray(data) ? data.slice(0, 3) : data
-                    }, duration);
-
-                } catch (error) {
-                    const endTime = performance.now();
-                    const duration = Math.round(endTime - startTime);
-                    displayResponse('rest', `Erro na requisição: ${error.message}`, duration, true);
-                }
-            }
-
-            async listarUsuarios() {
-                await this.makeRequest('/usuarios', 'Listar todos os usuários');
-            }
-
-            async listarMusicas() {
-                await this.makeRequest('/musicas', 'Listar todas as músicas');
-            }
-
-            async listarPlaylistsUsuario(userId) {
-                await this.makeRequest(`/usuarios/${userId}/playlists`, `Playlists do usuário ${userId}`);
-            }
-
-            async listarMusicasPlaylist(playlistId) {
-                await this.makeRequest(`/playlists/${playlistId}/musicas`, `Músicas da playlist ${playlistId}`);
-            }
-
-            async listarPlaylistsComMusica(musicId) {
-                await this.makeRequest(`/musicas/${musicId}/playlists`, `Playlists contendo música ${musicId}`);
-            }
-        }
-
-        // Cliente GraphQL
-        class GraphQLClient {
-            constructor(endpoint) {
-                this.endpoint = endpoint;
-            }
-
-            async query(queryString, variables = {}, description = '') {
-                showLoading('graphql');
-                const startTime = performance.now();
-
-                try {
-                    const response = await fetch(this.endpoint, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query: queryString, variables })
-                    });
-
-                    const result = await response.json();
-                    const endTime = performance.now();
-                    const duration = Math.round(endTime - startTime);
-
-                    displayResponse('graphql', {
-                        operacao: description,
-                        query: queryString.replace(/\s+/g, ' ').trim(),
-                        dados: result.data,
-                        erros: result.errors || 'Nenhum erro'
-                    }, duration);
-
-                } catch (error) {
-                    const endTime = performance.now();
-                    const duration = Math.round(endTime - startTime);
-                    displayResponse('graphql', `Erro na query: ${error.message}`, duration, true);
-                }
-            }
-
-            async listarUsuarios() {
-                const query = `{
-                    usuarios {
-                        id
-                        nome
-                        idade
-                    }
-                }`;
-                await this.query(query, {}, 'Query: Listar usuários');
-            }
-
-            async listarMusicas() {
-                const query = `{
-                    musicas {
-                        id
-                        nome
-                        artista
-                        duracaoSegundos
-                    }
-                }`;
-                await this.query(query, {}, 'Query: Listar músicas');
-            }
-
-            async playlistsUsuario(userId) {
-                const query = `{
-                    playlistsUsuario(idUsuario: "${userId}") {
-                        id
-                        nome
-                        musicas
-                    }
-                }`;
-                await this.query(query, {}, `Query: Playlists do usuário ${userId}`);
-            }
-
-            async playlistCompleta(playlistId) {
-                const query = `{
-                    playlistCompleta(idPlaylist: "${playlistId}") {
-                        id
-                        nome
-                        usuario {
-                            nome
-                            idade
-                        }
-                        musicas {
-                            nome
-                            artista
-                        }
-                    }
-                }`;
-                await this.query(query, {}, `Query: Playlist completa ${playlistId}`);
-            }
-
-            async estatisticas() {
-                const query = `{
-                    estatisticas {
-                        totalUsuarios
-                        totalMusicas
-                        totalPlaylists
-                        mediaMusicasPorPlaylist
-                        tecnologia
-                    }
-                }`;
-                await this.query(query, {}, 'Query: Estatísticas gerais');
-            }
-        }
-
-        // Cliente SOAP (Demonstração)
-        class SOAPClient {
-            listarUsuarios() {
-                showLoading('soap');
-                setTimeout(() => {
-                    const soapResponse = `<?xml version="1.0"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <ListarUsuariosResponse>
-      <usuarios>
-        <usuario>
-          <id>user1</id>
-          <nome>Ana Silva</nome>
-          <idade>28</idade>
-        </usuario>
-        <usuario>
-          <id>user2</id>
-          <nome>João Santos</nome>
-          <idade>35</idade>
-        </usuario>
-      </usuarios>
-    </ListarUsuariosResponse>
-  </soap:Body>
-</soap:Envelope>`;
-                    displayResponse('soap', soapResponse, 180);
-                }, 500);
-            }
-
-            listarMusicas() {
-                showLoading('soap');
-                setTimeout(() => {
-                    displayResponse('soap', {
-                        operacao: 'SOAP ListarMusicas',
-                        observacao: 'Implementação SOAP seria similar ao REST, mas com XML',
-                        caracteristicas: [
-                            'Mensagens XML verbosas',
-                            'WSDL define o contrato',
-                            'Suporte a tipos complexos',
-                            'Padrões WS-* para segurança'
-                        ]
-                    }, 195);
-                }, 600);
-            }
-
-            mostrarWSDL() {
-                showLoading('soap');
-                setTimeout(() => {
-                    const wsdl = `<definitions xmlns="http://schemas.xmlsoap.org/wsdl/">
-  <types>
-    <schema targetNamespace="http://streaming.exemplo.com/">
-      <complexType name="Usuario">
-        <sequence>
-          <element name="id" type="string"/>
-          <element name="nome" type="string"/>
-          <element name="idade" type="int"/>
-        </sequence>
-      </complexType>
-    </schema>
-  </types>
-
-  <message name="ListarUsuariosRequest"/>
-  <message name="ListarUsuariosResponse">
-    <part name="usuarios" type="tns:ArrayOfUsuarios"/>
-  </message>
-
-  <portType name="StreamingServicePortType">
-    <operation name="ListarUsuarios">
-      <input message="tns:ListarUsuariosRequest"/>
-      <output message="tns:ListarUsuariosResponse"/>
-    </operation>
-  </portType>
-</definitions>`;
-                    displayResponse('soap', wsdl, 50);
-                }, 300);
-            }
-
-            mostrarEnvelope() {
-                showLoading('soap');
-                setTimeout(() => {
-                    const envelope = `Exemplo de requisição SOAP:
-
-POST /soap HTTP/1.1
-Content-Type: text/xml; charset=utf-8
-SOAPAction: "http://streaming.exemplo.com/ListarUsuarios"
-
-<?xml version="1.0"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Header>
-    <!-- Headers opcionais -->
-  </soap:Header>
-  <soap:Body>
-    <tns:ListarUsuarios xmlns:tns="http://streaming.exemplo.com/">
-      <!-- Parâmetros da operação -->
-    </tns:ListarUsuarios>
-  </soap:Body>
-</soap:Envelope>`;
-                    displayResponse('soap', envelope, 45);
-                }, 200);
-            }
-
-            explicarSOAP() {
-                showLoading('soap');
-                setTimeout(() => {
-                    displayResponse('soap', {
-                        tecnologia: 'SOAP (Simple Object Access Protocol)',
-                        caracteristicas: {
-                            'Protocolo': 'Baseado em XML para troca de mensagens',
-                            'WSDL': 'Web Services Description Language - define contratos',
-                            'Transporte': 'HTTP, SMTP, TCP ou outros protocolos',
-                            'Tipagem': 'Forte, com validação XML Schema',
-                            'Padrões': 'WS-Security, WS-Trust, WS-Transaction'
-                        },
-                        vantagens: [
-                            'Padronização robusta',
-                            'Tipagem forte',
-                            'Suporte a transações complexas',
-                            'Interoperabilidade entre plataformas'
-                        ],
-                        desvantagens: [
-                            'Verbosidade (mensagens XML grandes)',
-                            'Complexidade de implementação',
-                            'Performance menor devido ao overhead',
-                            'Curva de aprendizado íngreme'
-                        ]
-                    }, 85);
-                }, 400);
-            }
-        }
-
-        // Cliente gRPC (Demonstração)
-        class GRPCClient {
-            listarUsuarios() {
-                showLoading('grpc');
-                setTimeout(() => {
-                    displayResponse('grpc', {
-                        operacao: 'gRPC ListarUsuarios',
-                        observacao: 'gRPC não funciona diretamente no browser - necessita proxy',
-                        simulacao: {
-                            protocolBuffers: 'Dados serializados em formato binário',
-                            http2: 'Protocolo HTTP/2 para melhor performance',
-                            streaming: 'Suporte a streaming bidirecional',
-                            codigoGerado: 'Cliente e servidor gerados automaticamente'
-                        },
-                        dadosSimulados: [
-                            { id: 'user1', nome: 'Ana Silva', idade: 28 },
-                            { id: 'user2', nome: 'João Santos', idade: 35 }
-                        ]
-                    }, 28);
-                }, 300);
-            }
-
-            listarMusicas() {
-                showLoading('grpc');
-                setTimeout(() => {
-                    displayResponse('grpc', {
-                        operacao: 'gRPC ListarMusicas',
-                        performance: 'gRPC é ~3x mais rápido que REST devido ao formato binário',
-                        eficiencia: {
-                            'Serialização': 'Protocol Buffers (binário compacto)',
-                            'Compressão': 'Nativa no HTTP/2',
-                            'Multiplexing': 'Múltiplas requisições simultâneas',
-                            'Headers': 'Compressão HPACK'
-                        }
-                    }, 32);
-                }, 250);
-            }
-
-            mostrarProto() {
-                showLoading('grpc');
-                setTimeout(() => {
-                    const proto = `syntax = "proto3";
-
-package streaming;
-
-service StreamingService {
-  rpc ListarUsuarios(Empty) returns (UsuariosResponse);
-  rpc ListarMusicas(Empty) returns (MusicasResponse);
-  rpc StreamMusicas(stream MusicaRequest) returns (stream MusicaResponse);
-}
-
-message Usuario {
-  string id = 1;
-  string nome = 2;
-  int32 idade = 3;
-}
-
-message Musica {
-  string id = 1;
-  string nome = 2;
-  string artista = 3;
-  int32 duracao_segundos = 4;
-}
-
-message UsuariosResponse {
-  repeated Usuario usuarios = 1;
-}`;
-                    displayResponse('grpc', proto, 25);
-                }, 200);
-            }
-
-            exemploStreaming() {
-                showLoading('grpc');
-                setTimeout(() => {
-                    displayResponse('grpc', {
-                        recurso: 'Streaming Bidirecional',
-                        exemplo: 'StreamMusicas - cliente e servidor trocam mensagens em tempo real',
-                        implementacao: `
-// Cliente JavaScript (conceitual)
-const call = client.streamMusicas();
-
-call.on('data', (response) => {
-  console.log('Música recebida:', response.musica);
-});
-
-// Enviar requisições
-call.write({ idMusica: 'music1' });
-call.write({ idMusica: 'music2' });
-
-call.end();`,
-                        vantagens: [
-                            'Comunicação bidirecional em tempo real',
-                            'Baixa latência',
-                            'Eficiente para grandes volumes de dados'
-                        ]
-                    }, 35);
-                }, 350);
-            }
-
-            explicarGRPC() {
-                showLoading('grpc');
-                setTimeout(() => {
-                    displayResponse('grpc', {
-                        tecnologia: 'gRPC (Google Remote Procedure Call)',
-                        caracteristicas: {
-                            'Serialização': 'Protocol Buffers (formato binário)',
-                            'Protocolo': 'HTTP/2 com multiplexing',
-                            'Performance': 'Alta (serialização binária)',
-                            'Streaming': 'Bidirecional nativo',
-                            'Geração': 'Código cliente/servidor automático'
-                        },
-                        vantagens: [
-                            'Performance superior (HTTP/2 + binário)',
-                            'Tipagem forte com Protocol Buffers',
-                            'Streaming bidirecional nativo',
-                            'Geração automática de código',
-                            'Suporte a múltiplas linguagens'
-                        ],
-                        desvantagens: [
-                            'Não funciona diretamente em browsers',
-                            'Curva de aprendizado (Protocol Buffers)',
-                            'Debugging mais complexo (formato binário)',
-                            'Menos flexível que JSON para mudanças ad-hoc'
-                        ],
-                        uso_ideal: [
-                            'Comunicação entre microsserviços',
-                            'APIs internas de alta performance',
-                            'Sistemas que requerem streaming',
-                            'Ambientes controlados (não público)'
-                        ]
-                    }, 42);
-                }, 500);
-            }
-        }
-
-        // Inicializar clientes
-        const restClient = new RESTClient(config.restURL);
-        const graphqlClient = new GraphQLClient(config.graphqlURL);
-        const soapClient = new SOAPClient();
-        const grpcClient = new GRPCClient();
-
-        // Verificar status do backend
-        async function verificarBackend() {
-            const statusElement = document.getElementById('backend-status');
-            const urlsElement = document.getElementById('backend-urls');
-
-            try {
-                // Testar REST
-                const restResponse = await fetch(`${config.restURL}/stats`);
-                const restOk = restResponse.ok;
-
-                // Testar GraphQL
-                const graphqlResponse = await fetch(config.graphqlURL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: '{ __typename }' })
-                });
-                const graphqlOk = graphqlResponse.ok;
-
-                if (restOk && graphqlOk) {
-                    statusElement.innerHTML = '<span style="color: #4ec9b0;">✅ Todos os serviços ativos</span>';
-                    urlsElement.innerHTML = `REST: ${config.restURL} | GraphQL: ${config.graphqlURL}`;
-                } else {
-                    statusElement.innerHTML = '<span style="color: #ffcc02;">⚠️ Alguns serviços offline</span>';
-                    urlsElement.textContent = 'Verifique se o backend está rodando';
-                }
-            } catch (error) {
-                statusElement.innerHTML = '<span style="color: #f14c4c;">❌ Backend offline</span>';
-                urlsElement.textContent = 'Execute: python main.py';
-            }
-        }
-
-        // Função para demonstração automatizada
-        async function demonstracaoAutomatica() {
-            console.log('🎯 Iniciando demonstração automatizada...');
-
-            // Aguardar um pouco
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // REST
-            console.log('🔵 Testando REST...');
-            await restClient.listarUsuarios();
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // GraphQL
-            console.log('🟣 Testando GraphQL...');
-            await graphqlClient.listarUsuarios();
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // SOAP
-            console.log('🟡 Testando SOAP...');
-            soapClient.listarUsuarios();
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // gRPC
-            console.log('🟢 Testando gRPC...');
-            grpcClient.listarUsuarios();
-
-            console.log('✅ Demonstração automatizada concluída!');
-        }
-
-        // Adicionar função global para console
-        window.demo = demonstracaoAutomatica;
-
-        // Verificar backend ao carregar
-        document.addEventListener('DOMContentLoaded', function() {
-            verificarBackend();
-
-            // Adicionar dica no console
-            console.log(`
-🎯 CLIENTE JAVASCRIPT - COMPARAÇÃO DE APIS
-==========================================
-
-COMANDOS DISPONÍVEIS:
-• demo() - Executa demonstração automatizada
-• restClient.listarUsuarios() - Teste REST manual
-• graphqlClient.listarUsuarios() - Teste GraphQL manual
-• soapClient.explicarSOAP() - Explicação SOAP
-• grpcClient.explicarGRPC() - Explicação gRPC
-
-URLS DOS SERVIÇOS:
-• REST: ${config.restURL}
-• GraphQL: ${config.graphqlURL}
-• SOAP/gRPC: ${config.soapURL}
-
-Para demonstração automática, digite: demo()
-            `);
-        });
-
-        // Atualizar métricas na tabela periodicamente
-        setInterval(() => {
-            // Simular métricas para SOAP e gRPC baseadas em características
-            if (metrics.soap.requests > 0) {
-                document.getElementById('table-soap-time').textContent = '~180';
-            }
-            if (metrics.grpc.requests > 0) {
-                🎨 Interface Simples mas Funcional
-
-                Visual tipo terminal/IDE (fundo escuro, fonte monospace)
-                Botões para todas as operações das 4 tecnologias
-                Métricas em tempo real (requisições, tempo médio, erros)
-                Respostas formatadas com timestamp e dados
-                Tabela comparativa atualizada dinamicamente
-document.getElementById('table-grpc-time').textContent = '~28';
-            }
-        }, 1000);
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-                            '

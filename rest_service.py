@@ -13,7 +13,7 @@ Para executar:
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from typing import List, Dict, Optional
 import json
 import os
@@ -111,8 +111,51 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Serviço de Streaming - REST API",
-    description="API REST para gerenciamento de usuários, músicas e playlists",
+    description="""
+    API REST para gerenciamento de usuários, músicas e playlists.
+    
+    ## Funcionalidades
+    
+    * Gerenciamento completo de usuários (CRUD)
+    * Gerenciamento completo de músicas (CRUD)
+    * Gerenciamento completo de playlists (CRUD)
+    * Paginação em todas as listagens
+    * Tratamento de erros padronizado
+    * Documentação OpenAPI/Swagger
+    
+    ## Autenticação
+    
+    Esta API não requer autenticação para demonstração.
+    
+    ## Endpoints
+    
+    * `/usuarios` - Gerenciamento de usuários
+    * `/musicas` - Gerenciamento de músicas
+    * `/playlists` - Gerenciamento de playlists
+    * `/stats` - Estatísticas do serviço
+    """,
     version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    openapi_tags=[
+        {
+            "name": "usuarios",
+            "description": "Operações relacionadas a usuários",
+        },
+        {
+            "name": "musicas",
+            "description": "Operações relacionadas a músicas",
+        },
+        {
+            "name": "playlists",
+            "description": "Operações relacionadas a playlists",
+        },
+        {
+            "name": "estatisticas",
+            "description": "Operações relacionadas a estatísticas do serviço",
+        }
+    ],
     lifespan=lifespan
 )
 
@@ -214,25 +257,89 @@ async def home():
     """
     return html_content
 
-@app.get("/usuarios", response_model=List[Dict])
-async def listar_todos_usuarios():
+# ========== PAGINATION AND ERROR HANDLING ==========
+
+class PaginatedResponse:
+    def __init__(self, items: List, total: int, page: int, page_size: int):
+        self.items = items
+        self.total = total
+        self.page = page
+        self.page_size = page_size
+        self.total_pages = (total + page_size - 1) // page_size
+
+    def dict(self):
+        return {
+            "items": self.items,
+            "total": self.total,
+            "page": self.page,
+            "page_size": self.page_size,
+            "total_pages": self.total_pages
+        }
+
+@app.get("/usuarios", response_model=Dict, tags=["usuarios"])
+async def listar_todos_usuarios(
+    page: int = Query(1, ge=1, description="Número da página"),
+    page_size: int = Query(10, ge=1, le=100, description="Itens por página")
+):
     """
-    Lista todos os usuários do serviço.
+    Lista todos os usuários do serviço com paginação.
 
     **Princípio REST**: Recurso /usuarios acessado via GET
     """
-    return data_loader.usuarios
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    
+    usuarios_paginados = data_loader.usuarios[start_idx:end_idx]
+    return PaginatedResponse(
+        items=usuarios_paginados,
+        total=len(data_loader.usuarios),
+        page=page,
+        page_size=page_size
+    ).dict()
 
-@app.get("/musicas", response_model=List[Dict])
-async def listar_todas_musicas():
+@app.get("/musicas", response_model=Dict, tags=["musicas"])
+async def listar_todas_musicas(
+    page: int = Query(1, ge=1, description="Número da página"),
+    page_size: int = Query(10, ge=1, le=100, description="Itens por página")
+):
     """
-    Lista todas as músicas disponíveis no serviço.
+    Lista todas as músicas disponíveis no serviço com paginação.
 
     **Princípio REST**: Recurso /musicas acessado via GET
     """
-    return data_loader.musicas
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    
+    musicas_paginadas = data_loader.musicas[start_idx:end_idx]
+    return PaginatedResponse(
+        items=musicas_paginadas,
+        total=len(data_loader.musicas),
+        page=page,
+        page_size=page_size
+    ).dict()
 
-@app.get("/usuarios/{id_usuario}/playlists", response_model=List[Dict])
+@app.get("/playlists", response_model=Dict, tags=["playlists"])
+async def listar_todas_playlists(
+    page: int = Query(1, ge=1, description="Número da página"),
+    page_size: int = Query(10, ge=1, le=100, description="Itens por página")
+):
+    """
+    Lista todas as playlists disponíveis no serviço com paginação.
+
+    **Princípio REST**: Recurso /playlists acessado via GET
+    """
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    
+    playlists_paginadas = data_loader.playlists[start_idx:end_idx]
+    return PaginatedResponse(
+        items=playlists_paginadas,
+        total=len(data_loader.playlists),
+        page=page,
+        page_size=page_size
+    ).dict()
+
+@app.get("/usuarios/{id_usuario}/playlists", response_model=List[Dict], tags=["usuarios"])
 async def listar_playlists_usuario(id_usuario: str):
     """
     Lista todas as playlists de um usuário específico.
@@ -247,7 +354,7 @@ async def listar_playlists_usuario(id_usuario: str):
     playlists_usuario = [p for p in data_loader.playlists if p["idUsuario"] == id_usuario]
     return playlists_usuario
 
-@app.get("/playlists/{id_playlist}/musicas", response_model=List[Dict])
+@app.get("/playlists/{id_playlist}/musicas", response_model=List[Dict], tags=["playlists"])
 async def listar_musicas_playlist(id_playlist: str):
     """
     Lista todas as músicas de uma playlist específica.
@@ -268,7 +375,7 @@ async def listar_musicas_playlist(id_playlist: str):
 
     return musicas_da_playlist
 
-@app.get("/musicas/{id_musica}/playlists", response_model=List[Dict])
+@app.get("/musicas/{id_musica}/playlists", response_model=List[Dict], tags=["musicas"])
 async def listar_playlists_com_musica(id_musica: str):
     """
     Lista todas as playlists que contêm uma música específica.
@@ -283,7 +390,7 @@ async def listar_playlists_com_musica(id_musica: str):
     playlists_com_musica = [p for p in data_loader.playlists if id_musica in p["musicas"]]
     return playlists_com_musica
 
-@app.get("/stats")
+@app.get("/stats", tags=["estatisticas"])
 async def obter_estatisticas():
     """
     Retorna estatísticas gerais do serviço.
@@ -306,7 +413,7 @@ async def obter_estatisticas():
 
 # ========== ENDPOINTS CRUD  ==========
 
-@app.post("/usuarios", response_model=Dict)
+@app.post("/usuarios", response_model=Dict, tags=["usuarios"])
 async def criar_usuario(nome: str, idade: int):
     """
     Cria um novo usuário.
@@ -322,7 +429,7 @@ async def criar_usuario(nome: str, idade: int):
     data_loader.usuarios.append(novo_usuario)
     return novo_usuario
 
-@app.get("/usuarios/{id_usuario}", response_model=Dict)
+@app.get("/usuarios/{id_usuario}", response_model=Dict, tags=["usuarios"])
 async def obter_usuario(id_usuario: str):
     """
     Obtém um usuário específico por ID.
@@ -333,6 +440,183 @@ async def obter_usuario(id_usuario: str):
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     return usuario
+
+# ========== CRUD OPERATIONS FOR MUSICS ==========
+
+@app.post("/musicas", response_model=Dict, tags=["musicas"])
+async def criar_musica(nome: str, artista: str, duracaoSegundos: int):
+    """
+    Cria uma nova música.
+
+    **Princípio REST**: POST para criar recursos
+    """
+    nova_musica = {
+        "id": f"music{len(data_loader.musicas) + 1}",
+        "nome": nome,
+        "artista": artista,
+        "duracaoSegundos": duracaoSegundos
+    }
+    data_loader.musicas.append(nova_musica)
+    return nova_musica
+
+@app.get("/musicas/{id_musica}", response_model=Dict, tags=["musicas"])
+async def obter_musica(id_musica: str):
+    """
+    Obtém uma música específica por ID.
+
+    **Princípio REST**: GET em recurso específico
+    """
+    musica = next((m for m in data_loader.musicas if m["id"] == id_musica), None)
+    if not musica:
+        raise HTTPException(status_code=404, detail="Música não encontrada")
+    return musica
+
+@app.put("/musicas/{id_musica}", response_model=Dict, tags=["musicas"])
+async def atualizar_musica(id_musica: str, nome: str = None, artista: str = None, duracaoSegundos: int = None):
+    """
+    Atualiza uma música existente.
+
+    **Princípio REST**: PUT para atualizar recursos
+    """
+    musica = next((m for m in data_loader.musicas if m["id"] == id_musica), None)
+    if not musica:
+        raise HTTPException(status_code=404, detail="Música não encontrada")
+    
+    if nome:
+        musica["nome"] = nome
+    if artista:
+        musica["artista"] = artista
+    if duracaoSegundos:
+        musica["duracaoSegundos"] = duracaoSegundos
+    
+    return musica
+
+@app.delete("/musicas/{id_musica}", tags=["musicas"])
+async def deletar_musica(id_musica: str):
+    """
+    Remove uma música do sistema.
+
+    **Princípio REST**: DELETE para remover recursos
+    """
+    musica = next((m for m in data_loader.musicas if m["id"] == id_musica), None)
+    if not musica:
+        raise HTTPException(status_code=404, detail="Música não encontrada")
+    
+    data_loader.musicas.remove(musica)
+    return {"message": "Música removida com sucesso"}
+
+# ========== CRUD OPERATIONS FOR PLAYLISTS ==========
+
+@app.post("/playlists", response_model=Dict, tags=["playlists"])
+async def criar_playlist(nome: str, idUsuario: str, musicas: List[str] = None):
+    """
+    Cria uma nova playlist.
+
+    **Princípio REST**: POST para criar recursos
+    """
+    # Verificar se usuário existe
+    usuario_existe = any(u["id"] == idUsuario for u in data_loader.usuarios)
+    if not usuario_existe:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Verificar se todas as músicas existem
+    if musicas:
+        for id_musica in musicas:
+            musica_existe = any(m["id"] == id_musica for m in data_loader.musicas)
+            if not musica_existe:
+                raise HTTPException(status_code=404, detail=f"Música {id_musica} não encontrada")
+    
+    nova_playlist = {
+        "id": f"playlist{len(data_loader.playlists) + 1}",
+        "nome": nome,
+        "idUsuario": idUsuario,
+        "musicas": musicas or []
+    }
+    data_loader.playlists.append(nova_playlist)
+    return nova_playlist
+
+@app.get("/playlists/{id_playlist}", response_model=Dict, tags=["playlists"])
+async def obter_playlist(id_playlist: str):
+    """
+    Obtém uma playlist específica por ID.
+
+    **Princípio REST**: GET em recurso específico
+    """
+    playlist = next((p for p in data_loader.playlists if p["id"] == id_playlist), None)
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist não encontrada")
+    return playlist
+
+@app.put("/playlists/{id_playlist}", response_model=Dict, tags=["playlists"])
+async def atualizar_playlist(id_playlist: str, nome: str = None, musicas: List[str] = None):
+    """
+    Atualiza uma playlist existente.
+
+    **Princípio REST**: PUT para atualizar recursos
+    """
+    playlist = next((p for p in data_loader.playlists if p["id"] == id_playlist), None)
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist não encontrada")
+    
+    if nome:
+        playlist["nome"] = nome
+    if musicas is not None:
+        # Verificar se todas as músicas existem
+        for id_musica in musicas:
+            musica_existe = any(m["id"] == id_musica for m in data_loader.musicas)
+            if not musica_existe:
+                raise HTTPException(status_code=404, detail=f"Música {id_musica} não encontrada")
+        playlist["musicas"] = musicas
+    
+    return playlist
+
+@app.delete("/playlists/{id_playlist}", tags=["playlists"])
+async def deletar_playlist(id_playlist: str):
+    """
+    Remove uma playlist do sistema.
+
+    **Princípio REST**: DELETE para remover recursos
+    """
+    playlist = next((p for p in data_loader.playlists if p["id"] == id_playlist), None)
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist não encontrada")
+    
+    data_loader.playlists.remove(playlist)
+    return {"message": "Playlist removida com sucesso"}
+
+# ========== ERROR HANDLERS ==========
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    """
+    Handler global para exceções HTTP.
+    """
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": {
+                "code": exc.status_code,
+                "message": exc.detail,
+                "type": "HTTPException"
+            }
+        }
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request, exc):
+    """
+    Handler global para exceções não tratadas.
+    """
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": {
+                "code": 500,
+                "message": "Erro interno do servidor",
+                "type": "InternalServerError"
+            }
+        }
+    )
 
 # ========== FUNÇÃO PARA EXECUTAR O SERVIDOR ==========
 

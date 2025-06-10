@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package streaming;
+
+// Service definition
+service StreamingService {
+  // Basic operations
+  rpc ListarTodosUsuarios(Empty) returns (UsuariosResponse);
+  rpc ListarTodasMusicas(Empty) returns (MusicasResponse);
+  rpc ListarPlaylistsUsuario(UsuarioRequest) returns (PlaylistsResponse);
+  rpc ListarMusicasPlaylist(PlaylistRequest) returns (MusicasResponse);
+  rpc ListarPlaylistsComMusica(MusicaRequest) returns (PlaylistsResponse);
+  rpc ObterEstatisticas(Empty) returns (EstatisticasResponse);
+  
+  // Streaming operation
+  rpc StreamMusicas(stream MusicaRequest) returns (stream Musica);
+}
+
+// Empty message for requests that don't need parameters
+message Empty {}
+
+// Request messages
+message UsuarioRequest {
+  string id_usuario = 1;
+}
+
+message PlaylistRequest {
+  string id_playlist = 1;
+}
+
+message MusicaRequest {
+  string id_musica = 1;
+}
+
+// Response messages
+message Usuario {
+  string id = 1;
+  string nome = 2;
+  int32 idade = 3;
+}
+
+message Musica {
+  string id = 1;
+  string nome = 2;
+  string artista = 3;
+  int32 duracao_segundos = 4;
+}
+
+message Playlist {
+  string id = 1;
+  string nome = 2;
+  string id_usuario = 3;
+  repeated string musicas = 4;
+}
+
+message UsuariosResponse {
+  repeated Usuario usuarios = 1;
+}
+
+message MusicasResponse {
+  repeated Musica musicas = 1;
+}
+
+message PlaylistsResponse {
+  repeated Playlist playlists = 1;
+}
+
+message EstatisticasResponse {
+  int32 total_usuarios = 1;
+  int32 total_musicas = 2;
+  int32 total_playlists = 3;
+  float media_musicas_por_playlist = 4;
+  string tecnologia = 5;
+} 
