@@ -19,7 +19,18 @@ import json
 import os
 from contextlib import asynccontextmanager
 
-# Simulação do data_loader (versão simplificada para ambiente web)
+# Importa o carregador real de dados gerados em ``data/``
+from data_loader import get_data_loader
+
+# ---------------------------------------------------------------------------
+# Observação sobre o antigo ``SimpleDataLoader``
+# ---------------------------------------------------------------------------
+# A implementação original deste serviço usava dados "mock" em memória para
+# facilitar a execução em ambientes web. Para o trabalho final, os dados devem
+# ser carregados a partir dos arquivos JSON gerados por ``modelagem_dados.py``.
+# O ``StreamingDataLoader`` providencia consultas otimizadas e é compartilhado
+# entre todos os backends. A classe a seguir permanece apenas como referência de
+# como os exemplos eram estruturados.
 class SimpleDataLoader:
     def __init__(self):
         self.usuarios = []
@@ -28,8 +39,7 @@ class SimpleDataLoader:
         self._carregar_dados_mock()
 
     def _carregar_dados_mock(self):
-        """Carrega dados mock para demonstração (substitui arquivos JSON)"""
-        # Dados de exemplo para demonstração
+        """Carrega dados mock para demonstração (substitui arquivos JSON)."""
         self.usuarios = [
             {"id": "user1", "nome": "Ana Silva", "idade": 28},
             {"id": "user2", "nome": "João Santos", "idade": 35},
@@ -79,7 +89,16 @@ class SimpleDataLoader:
         print(f"✅ Dados mock carregados: {len(self.usuarios)} usuários, {len(self.musicas)} músicas, {len(self.playlists)} playlists")
 
 # Instância global do data loader
-data_loader = SimpleDataLoader()
+# Sempre que possível utilizamos os arquivos JSON gerados em ``data/``.
+# Caso o carregamento falhe (ex.: arquivos ausentes), recai-se para o loader
+# simplificado apenas para fins de demonstração.
+try:
+    data_loader = get_data_loader()
+    print("✅ Dados reais carregados do diretório 'data/'")
+except Exception as exc:  # pragma: no cover - falha somente em ambiente demo
+    print(f"⚠️  Erro ao carregar dados reais: {exc}")
+    print("🔄 Utilizando SimpleDataLoader como fallback")
+    data_loader = SimpleDataLoader()
 
 # Configuração do FastAPI
 @asynccontextmanager

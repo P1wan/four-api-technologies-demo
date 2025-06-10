@@ -19,6 +19,9 @@ from fastapi.responses import HTMLResponse
 from typing import List, Optional
 from contextlib import asynccontextmanager
 
+# Loader de dados real utilizado por todos os backends
+from data_loader import get_data_loader
+
 # ========== TIPOS GRAPHQL ==========
 
 @strawberry.type
@@ -61,6 +64,8 @@ class Estatisticas:
 # ========== DATA LOADER (Simulação) ==========
 
 class GraphQLDataLoader:
+    """Loader de dados mock utilizado apenas para ambientes de demonstração."""
+
     def __init__(self):
         self.usuarios = [
             {"id": "user1", "nome": "Ana Silva", "idade": 28},
@@ -69,7 +74,6 @@ class GraphQLDataLoader:
             {"id": "user4", "nome": "Pedro Lima", "idade": 45},
             {"id": "user5", "nome": "Lucia Ferreira", "idade": 31}
         ]
-
         self.musicas = [
             {"id": "music1", "nome": "Amor Perfeito", "artista": "Ana Silva", "duracaoSegundos": 240},
             {"id": "music2", "nome": "Noite Estrelada", "artista": "João Santos", "duracaoSegundos": 210},
@@ -80,7 +84,6 @@ class GraphQLDataLoader:
             {"id": "music7", "nome": "Tempestade", "artista": "João Santos", "duracaoSegundos": 190},
             {"id": "music8", "nome": "Serenata", "artista": "Maria Costa", "duracaoSegundos": 175}
         ]
-
         self.playlists = [
             {"id": "playlist1", "nome": "Meus Favoritos", "idUsuario": "user1", "musicas": ["music1", "music2", "music5"]},
             {"id": "playlist2", "nome": "Relaxar", "idUsuario": "user1", "musicas": ["music3", "music6", "music8"]},
@@ -88,10 +91,16 @@ class GraphQLDataLoader:
             {"id": "playlist4", "nome": "Workout Mix", "idUsuario": "user3", "musicas": ["music2", "music4", "music7"]}
         ]
 
-        print(f"✅ GraphQL Data Loader inicializado")
+        print("✅ GraphQL Data Loader (mock) inicializado")
 
-# Instância global
-data_loader = GraphQLDataLoader()
+# Instância global: tenta usar dados reais e faz fallback para o mock
+try:
+    data_loader = get_data_loader()
+    print("✅ Dados reais carregados para GraphQL")
+except Exception as exc:
+    print(f"⚠️  Erro ao carregar dados reais: {exc}")
+    print("🔄 Utilizando GraphQLDataLoader mock")
+    data_loader = GraphQLDataLoader()
 
 # ========== RESOLVERS ==========
 
