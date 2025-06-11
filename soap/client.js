@@ -61,9 +61,8 @@ class SOAPClient {
     /**
      * Create a new song
      */
-    async criarMusica(id, nome, artista, duracao) {
+    async criarMusica(nome, artista, duracao) {
         return await this.executeOperation('criar_musica', {
-            id: id,
             nome: nome,
             artista: artista,
             duracao: parseInt(duracao)
@@ -578,23 +577,21 @@ async function criarUsuario() {
 }
 
 async function criarMusica() {
-    const id = document.getElementById('novaMusicaId')?.value;
     const nome = document.getElementById('novaMusicaNome')?.value;
     const artista = document.getElementById('novaMusicaArtista')?.value;
     const duracao = document.getElementById('novaMusicaDuracao')?.value;
 
-    if (!id || !nome || !artista || !duracao) {
+    if (!nome || !artista || !duracao) {
         displayError(new Error('Todos os campos são obrigatórios'), 'criar_musica');
         return;
     }
 
     try {
         clearResponse();
-        const data = await client.criarMusica(id, nome, artista, duracao);
+        const data = await client.criarMusica(nome, artista, duracao);
         displayResponse(data, 'criar_musica');
-        
+
         // Clear the form
-        document.getElementById('novaMusicaId').value = '';
         document.getElementById('novaMusicaNome').value = '';
         document.getElementById('novaMusicaArtista').value = '';
         document.getElementById('novaMusicaDuracao').value = '';

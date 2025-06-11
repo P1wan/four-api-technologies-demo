@@ -446,9 +446,7 @@
                                                 Criar Música
                                             </h6>
                                             <div class="mb-3">
-                                                <input type="text" class="form-control mb-2" id="novaMusicaId" 
-                                                       placeholder="ID único da música">
-                                                <input type="text" class="form-control mb-2" id="novaMusicaNome" 
+                                                <input type="text" class="form-control mb-2" id="novaMusicaNome"
                                                        placeholder="Nome da música">
                                                 <input type="text" class="form-control mb-2" id="novaMusicaArtista" 
                                                        placeholder="Nome do artista">
@@ -687,7 +685,6 @@
         function fillTestData() {
             // Generate random IDs
             const userId = 'user_' + Math.random().toString(36).substr(2, 5);
-            const musicId = 'music_' + Math.random().toString(36).substr(2, 5);
             const playlistId = 'playlist_' + Math.random().toString(36).substr(2, 5);
 
             // Fill user form
@@ -696,7 +693,6 @@
             document.getElementById('novoUsuarioIdade').value = '25';
 
             // Fill music form
-            document.getElementById('novaMusicaId').value = musicId;
             document.getElementById('novaMusicaNome').value = 'Música Teste';
             document.getElementById('novaMusicaArtista').value = 'Artista Teste';
             document.getElementById('novaMusicaDuracao').value = '180';
