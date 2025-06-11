@@ -114,17 +114,17 @@ async function testSOAP() {
     console.log('\n📦 Testing SOAP API...');
     
     await runTest('List Users', async () => {
-        const result = await soapClient.executeOperation('ListarUsuarios');
+        const result = await soapClient.executeOperation('listar_usuarios');
         if (!result || !Array.isArray(result)) throw new Error('Invalid response format');
     }, 'soap');
 
     await runTest('List Songs', async () => {
-        const result = await soapClient.executeOperation('ListarMusicas');
+        const result = await soapClient.executeOperation('listar_musicas');
         if (!result || !Array.isArray(result)) throw new Error('Invalid response format');
     }, 'soap');
 
     await runTest('List Playlists', async () => {
-        const result = await soapClient.executeOperation('ListarPlaylists');
+        const result = await soapClient.executeOperation('listar_playlists');
         if (!result || !Array.isArray(result)) throw new Error('Invalid response format');
     }, 'soap');
 }
