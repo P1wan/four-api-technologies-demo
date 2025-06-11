@@ -52,6 +52,13 @@ O projeto usa `uv` para gerenciamento de dependências:
 python main.py
 ```
 
+Para executar os clientes e testes em JavaScript é necessário instalar o pacote
+`xmldom` para que o `DOMParser` funcione no Node.js:
+
+```bash
+npm install xmldom
+```
+
 ### 2. Gerar Dados (Primeira Execução)
 
 ```bash
