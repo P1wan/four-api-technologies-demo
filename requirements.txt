@@ -8,3 +8,4 @@ spyne
 lxml
 grpcio
 grpcio-tools
+zeep
