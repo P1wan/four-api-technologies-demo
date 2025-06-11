@@ -1,0 +1,9 @@
+{
+  "name": "four-api-technologies-demo",
+  "version": "1.0.0",
+  "description": "Demo of REST, GraphQL, SOAP and gRPC",
+  "main": "test_services.js",
+  "dependencies": {
+    "xmldom": "^0.8.10"
+  }
+}

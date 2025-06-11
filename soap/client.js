@@ -2,6 +2,13 @@
  * SOAP Client for Streaming Service
  * Implements all required operations for the project
  */
+// Detect environment and use appropriate DOMParser implementation
+let DOMParser;
+if (typeof window === 'undefined') {
+    ({ DOMParser } = require('xmldom'));
+} else {
+    DOMParser = window.DOMParser;
+}
 class SOAPClient {
     constructor(endpoint = 'http://localhost:8004') {
         this.endpoint = endpoint;
