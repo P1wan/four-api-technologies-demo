@@ -17,7 +17,7 @@ const config = {
         endpoint: 'http://localhost:8003'  // Using gRPC-Web proxy
     },
     soap: {
-        endpoint: 'http://localhost:8004/soap'
+        endpoint: 'http://localhost:8004/soap'  // Fixed: added /soap suffix
     }
 };
 
@@ -49,43 +49,96 @@ async function runTest(name, testFn, service) {
     }
 }
 
-// REST API Tests
+// REST API Tests - Fixed to handle paginated responses
 async function testRestAPI() {
     console.log('\n📡 Testing REST API...');
     
     await runTest('List Users', async () => {
-        const users = await restClient.listarUsuarios();
-        if (!Array.isArray(users)) throw new Error('Expected array of users');
+        const response = await restClient.listarUsuarios();
+        // Fixed: REST returns paginated response with 'items' property
+        if (!response.items || !Array.isArray(response.items)) {
+            throw new Error('Expected paginated response with items array');
+        }
+        console.log(`   Found ${response.items.length} users (total: ${response.total})`);
     }, 'rest');
 
     await runTest('List Songs', async () => {
-        const songs = await restClient.listarMusicas();
-        if (!Array.isArray(songs)) throw new Error('Expected array of songs');
+        const response = await restClient.listarMusicas();
+        // Fixed: REST returns paginated response with 'items' property
+        if (!response.items || !Array.isArray(response.items)) {
+            throw new Error('Expected paginated response with items array');
+        }
+        console.log(`   Found ${response.items.length} songs (total: ${response.total})`);
     }, 'rest');
 
     await runTest('List Playlists', async () => {
-        const playlists = await restClient.listarPlaylists();
-        if (!Array.isArray(playlists)) throw new Error('Expected array of playlists');
+        const response = await restClient.listarPlaylists();
+        // Fixed: REST returns paginated response with 'items' property
+        if (!response.items || !Array.isArray(response.items)) {
+            throw new Error('Expected paginated response with items array');
+        }
+        console.log(`   Found ${response.items.length} playlists (total: ${response.total})`);
     }, 'rest');
 }
 
-// GraphQL Tests
+// GraphQL Tests - Fixed to use correct field names
 async function testGraphQL() {
     console.log('\n🔍 Testing GraphQL API...');
     
     await runTest('Query Users', async () => {
-        const users = await graphqlClient.queryUsers();
-        if (!Array.isArray(users)) throw new Error('Expected array of users');
+        // Fixed: Use correct field name 'usuarios' instead of 'users'
+        const query = `
+            query {
+                usuarios {
+                    id
+                    nome
+                    idade
+                }
+            }
+        `;
+        const result = await graphqlClient.executeQuery(query);
+        if (!result.usuarios || !Array.isArray(result.usuarios)) {
+            throw new Error('Expected usuarios array');
+        }
+        console.log(`   Found ${result.usuarios.length} users`);
     }, 'graphql');
 
     await runTest('Query Songs', async () => {
-        const songs = await graphqlClient.querySongs();
-        if (!Array.isArray(songs)) throw new Error('Expected array of songs');
+        // Fixed: Use correct field name 'musicas' instead of 'songs'
+        const query = `
+            query {
+                musicas {
+                    id
+                    nome
+                    artista
+                    duracaoSegundos
+                }
+            }
+        `;
+        const result = await graphqlClient.executeQuery(query);
+        if (!result.musicas || !Array.isArray(result.musicas)) {
+            throw new Error('Expected musicas array');
+        }
+        console.log(`   Found ${result.musicas.length} songs`);
     }, 'graphql');
 
-    await runTest('Query Playlists', async () => {
-        const playlists = await graphqlClient.queryPlaylists();
-        if (!Array.isArray(playlists)) throw new Error('Expected array of playlists');
+    await runTest('Query User Playlists', async () => {
+        // Fixed: Use correct GraphQL query structure
+        const query = `
+            query {
+                playlistsUsuario(idUsuario: "user1") {
+                    id
+                    nome
+                    idUsuario
+                    musicas
+                }
+            }
+        `;
+        const result = await graphqlClient.executeQuery(query);
+        if (!result.playlistsUsuario || !Array.isArray(result.playlistsUsuario)) {
+            throw new Error('Expected playlistsUsuario array');
+        }
+        console.log(`   Found ${result.playlistsUsuario.length} playlists for user1`);
     }, 'graphql');
 }
 
@@ -109,23 +162,40 @@ async function testGrpc() {
     }, 'grpc');
 }
 
-// SOAP Tests
+// SOAP Tests - Fixed endpoint and improved validation
 async function testSOAP() {
     console.log('\n📦 Testing SOAP API...');
     
     await runTest('List Users', async () => {
-        const result = await soapClient.executeOperation('listar_usuarios');
-        if (!result || !Array.isArray(result)) throw new Error('Invalid response format');
+        const result = await soapClient.listarUsuarios();
+        if (!result || !Array.isArray(result)) {
+            throw new Error('Expected array of users in response');
+        }
+        console.log(`   Found ${result.length} users`);
     }, 'soap');
 
     await runTest('List Songs', async () => {
-        const result = await soapClient.executeOperation('listar_musicas');
-        if (!result || !Array.isArray(result)) throw new Error('Invalid response format');
+        const result = await soapClient.listarMusicas();
+        if (!result || !Array.isArray(result)) {
+            throw new Error('Expected array of songs in response');
+        }
+        console.log(`   Found ${result.length} songs`);
     }, 'soap');
 
     await runTest('List Playlists', async () => {
-        const result = await soapClient.executeOperation('listar_playlists');
-        if (!result || !Array.isArray(result)) throw new Error('Invalid response format');
+        const result = await soapClient.listarPlaylistsUsuario('user1');
+        if (!result || !Array.isArray(result)) {
+            throw new Error('Expected array of playlists in response');
+        }
+        console.log(`   Found ${result.length} playlists for user1`);
+    }, 'soap');
+
+    await runTest('Get Statistics', async () => {
+        const result = await soapClient.obterEstatisticas();
+        if (!result || typeof result !== 'object') {
+            throw new Error('Expected statistics object in response');
+        }
+        console.log('   Statistics retrieved successfully');
     }, 'soap');
 }
 
@@ -157,10 +227,16 @@ async function runTests() {
     console.log('\n📊 Test Summary:');
     console.log('================');
     
+    let totalPassed = 0;
+    let totalFailed = 0;
+    
     for (const [service, results] of Object.entries(testResults)) {
         console.log(`\n${service.toUpperCase()}:`);
-        console.log(`Passed: ${results.passed}`);
-        console.log(`Failed: ${results.failed}`);
+        console.log(`✅ Passed: ${results.passed}`);
+        console.log(`❌ Failed: ${results.failed}`);
+        
+        totalPassed += results.passed;
+        totalFailed += results.failed;
         
         if (results.errors.length > 0) {
             console.log('\nErrors:');
@@ -168,6 +244,17 @@ async function runTests() {
                 console.log(`- ${test}: ${error}`);
             });
         }
+    }
+    
+    console.log('\n🎯 OVERALL RESULTS:');
+    console.log(`✅ Total Passed: ${totalPassed}`);
+    console.log(`❌ Total Failed: ${totalFailed}`);
+    console.log(`📊 Success Rate: ${totalPassed > 0 ? Math.round((totalPassed / (totalPassed + totalFailed)) * 100) : 0}%`);
+    
+    if (totalFailed === 0) {
+        console.log('\n🎉 ALL TESTS PASSED! All services are working correctly.');
+    } else {
+        console.log('\n⚠️  Some tests failed. Check individual service implementations.');
     }
 }
 

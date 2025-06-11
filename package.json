@@ -3,7 +3,16 @@
   "version": "1.0.0",
   "description": "Demo of REST, GraphQL, SOAP and gRPC",
   "main": "test_services.js",
+  "scripts": {
+    "test": "node test_services.js",
+    "load-test": "node load_test.js",
+    "start": "node test_services.js"
+  },
   "dependencies": {
-    "xmldom": "^0.8.10"
-  }
+    "@xmldom/xmldom": "^0.8.10",
+    "node-fetch": "^2.6.7"
+  },
+  "keywords": ["rest", "graphql", "soap", "grpc", "api", "demo", "load-testing"],
+  "author": "Equipe de Computação Distribuída",
+  "license": "MIT"
 }

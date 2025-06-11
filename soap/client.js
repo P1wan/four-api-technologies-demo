@@ -5,7 +5,7 @@
 // Detect environment and use appropriate DOMParser implementation
 let DOMParser;
 if (typeof window === 'undefined') {
-    ({ DOMParser } = require('xmldom'));
+    ({ DOMParser } = require('@xmldom/xmldom'));
 } else {
     DOMParser = window.DOMParser;
 }
@@ -13,8 +13,8 @@ class SOAPClient {
     constructor(endpoint = 'http://localhost:8004') {
         this.endpoint = endpoint;
         this.wsdlUrl = `${endpoint}?wsdl`;
-        this.soapAction = 'http://streaming.soap';
-        this.namespace = 'http://streaming.soap';
+        this.soapAction = 'http://streaming.soap.service';
+        this.namespace = 'http://streaming.soap.service';
         
         this.metrics = {
             requestCount: 0,
@@ -240,71 +240,93 @@ class SOAPClient {
      * Extract meaningful data from parsed response
      */
     extractResponseData(parsed, operation) {
-        // Handle different response structures based on operation
-        if (typeof parsed === 'object' && parsed !== null) {
-            // If it's an array or has array-like properties, return as is
-            if (Array.isArray(parsed)) {
-                return parsed;
-            }
-            
-            // Look for common response patterns
-            const keys = Object.keys(parsed);
-            if (keys.length === 1) {
-                const firstKey = keys[0];
-                const value = parsed[firstKey];
+        try {
+            // Handle different response structures based on operation
+            if (typeof parsed === 'object' && parsed !== null) {
+                // If it's an array or has array-like properties, return as is
+                if (Array.isArray(parsed)) {
+                    return parsed;
+                }
                 
-                // If the value is an array or object, return it
-                if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
-                    return value;
+                // Look for common response patterns
+                const returnKey = `${operation}Return`;
+                if (parsed[returnKey]) {
+                    return parsed[returnKey];
+                }
+
+                // Handle specific operations
+                switch (operation) {
+                    case 'listar_usuarios':
+                        return parsed.usuarios || parsed.usuario || [];
+                    case 'listar_musicas':
+                        return parsed.musicas || parsed.musica || [];
+                    case 'listar_playlists':
+                    case 'listar_playlists_usuario':
+                        return parsed.playlists || parsed.playlist || [];
+                    case 'obter_estatisticas':
+                        return parsed.estatisticas || parsed.estatistica || {};
+                    default:
+                        return parsed;
                 }
             }
-            
-            // Return the parsed object as-is
             return parsed;
+        } catch (error) {
+            console.error('Error extracting response data:', error);
+            throw new Error(`Failed to extract response data: ${error.message}`);
         }
-        
-        return parsed;
     }
 
     /**
-     * Convert XML node to JSON object
+     * Convert XML to JSON
      */
     xmlToJson(xml) {
-        let obj = {};
+        try {
+            // Create the return object
+            let obj = {};
 
-        if (xml.nodeType === 1) { // Element node
-            // Handle attributes
-            if (xml.attributes.length > 0) {
-                obj["@attributes"] = {};
-                for (let j = 0; j < xml.attributes.length; j++) {
-                    const attribute = xml.attributes.item(j);
-                    obj["@attributes"][attribute.nodeName] = attribute.nodeValue;
-                }
-            }
-        } else if (xml.nodeType === 3) { // Text node
-            obj = xml.nodeValue;
-        }
-
-        // Handle child nodes
-        if (xml.hasChildNodes()) {
-            for (let i = 0; i < xml.childNodes.length; i++) {
-                const item = xml.childNodes.item(i);
-                const nodeName = item.nodeName;
-                
-                if (typeof(obj[nodeName]) === "undefined") {
-                    obj[nodeName] = this.xmlToJson(item);
-                } else {
-                    if (typeof(obj[nodeName].push) === "undefined") {
-                        const old = obj[nodeName];
-                        obj[nodeName] = [];
-                        obj[nodeName].push(old);
+            if (xml.nodeType === 1) { // element
+                // do attributes
+                if (xml.attributes.length > 0) {
+                    obj["@attributes"] = {};
+                    for (let j = 0; j < xml.attributes.length; j++) {
+                        const attribute = xml.attributes.item(j);
+                        obj["@attributes"][attribute.nodeName] = attribute.nodeValue;
                     }
-                    obj[nodeName].push(this.xmlToJson(item));
+                }
+            } else if (xml.nodeType === 3) { // text
+                obj = xml.nodeValue;
+            }
+
+            // do children
+            if (xml.hasChildNodes()) {
+                for (let i = 0; i < xml.childNodes.length; i++) {
+                    const item = xml.childNodes.item(i);
+                    const nodeName = item.nodeName;
+                    
+                    if (nodeName === '#text') {
+                        if (item.nodeValue.trim()) {
+                            obj = item.nodeValue;
+                        }
+                        continue;
+                    }
+                    
+                    if (typeof(obj[nodeName]) === "undefined") {
+                        obj[nodeName] = this.xmlToJson(item);
+                    } else {
+                        if (typeof(obj[nodeName].push) === "undefined") {
+                            const old = obj[nodeName];
+                            obj[nodeName] = [];
+                            obj[nodeName].push(old);
+                        }
+                        obj[nodeName].push(this.xmlToJson(item));
+                    }
                 }
             }
+            return obj;
+        } catch (error) {
+            console.error('Error converting XML to JSON:', error);
+            throw new Error(`Failed to convert XML to JSON: ${error.message}`);
         }
-        
-        return obj;
     }
 
     /**

@@ -1,6 +1,6 @@
 // GraphQL Client for Streaming Service
 class GraphQLClient {
-    constructor(endpoint = 'http://localhost:8002/graphql') {
+    constructor(endpoint = 'http://localhost:8001/graphql') {
         this.endpoint = endpoint;
         this.metrics = {
             requestCount: 0,
@@ -56,48 +56,49 @@ class GraphQLClient {
         return this.executeQuery(mutation, variables);
     }
 
-    // Add specific query methods
+    // Add specific query methods - Fixed to use correct Portuguese field names
     async queryUsers() {
         const query = `
             query {
-                users {
+                usuarios {
                     id
-                    name
-                    email
+                    nome
+                    idade
                 }
             }
         `;
-        return this.executeQuery(query);
+        const result = await this.executeQuery(query);
+        return result.usuarios;
     }
 
     async querySongs() {
         const query = `
             query {
-                songs {
+                musicas {
                     id
-                    title
-                    artist
-                    duration
+                    nome
+                    artista
+                    duracaoSegundos
                 }
             }
         `;
-        return this.executeQuery(query);
+        const result = await this.executeQuery(query);
+        return result.musicas;
     }
 
     async queryPlaylists() {
         const query = `
             query {
-                playlists {
+                playlistsUsuario(idUsuario: "user1") {
                     id
-                    name
-                    songs {
-                        id
-                        title
-                    }
+                    nome
+                    idUsuario
+                    musicas
                 }
             }
         `;
-        return this.executeQuery(query);
+        const result = await this.executeQuery(query);
+        return result.playlistsUsuario;
     }
 
     updateMetrics() {

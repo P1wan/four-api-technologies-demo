@@ -3,7 +3,7 @@ const http = require('http');
 const services = [
     { name: 'REST API', port: 8000, path: '/docs' },
     { name: 'GraphQL API', port: 8001, path: '/graphql' },
-    { name: 'SOAP API', port: 8004, path: '/soap?wsdl' }
+    { name: 'SOAP API', port: 8004, path: '?wsdl' }
 ];
 
 function checkService(service) {

@@ -24,6 +24,7 @@ from wsgiref.simple_server import make_server
 import json
 import uuid
 from typing import List, Dict, Optional
+import traceback
 
 # Usar dados reais gerados em data/
 from data_loader import get_data_loader
@@ -207,7 +208,8 @@ def criar_aplicacao_soap():
         [StreamingService],
         tns='http://streaming.soap.service',
         in_protocol=Soap11(validator='lxml'),
-        out_protocol=Soap11()
+        out_protocol=Soap11(),
+        name='StreamingService'
     )
     return application
 
@@ -215,6 +217,12 @@ def manipular_cors_e_roteamento(environ, start_response):
     """Manipula CORS e roteamento de requisições."""
     method = environ['REQUEST_METHOD']
     path = environ.get('PATH_INFO', '/')
+    
+    # Log request details
+    print(f"\nSOAP Request:")
+    print(f"Method: {method}")
+    print(f"Path: {path}")
+    print(f"Headers: {dict(environ)}")
     
     # Normalizar path para SOAP
     if path.startswith('/soap'):
@@ -245,65 +253,77 @@ def manipular_cors_e_roteamento(environ, start_response):
                 ul { margin: 20px 0; }
                 li { margin: 5px 0; }
                 a { color: #3498db; }
+                .error { color: #e74c3c; }
+                .success { color: #2ecc71; }
             </style>
         </head>
         <body>
             <h1>Serviço SOAP - Plataforma de Streaming</h1>
-            <p><strong>WSDL:</strong> <a href="/soap?wsdl">Baixar WSDL</a></p>
-            <p><strong>Status:</strong> Ativo e funcional</p>
-            
+            <p>Este é o serviço SOAP da plataforma de streaming.</p>
             <h2>Operações Disponíveis:</h2>
             <ul>
-                <li><strong>listar_usuarios()</strong> - Lista todos os usuários</li>
-                <li><strong>listar_musicas()</strong> - Lista todas as músicas</li>
-                <li><strong>listar_playlists()</strong> - Lista todas as playlists</li>
-                <li><strong>obter_usuario(id_usuario)</strong> - Obtém usuário por ID</li>
-                <li><strong>criar_usuario(nome, idade)</strong> - Cria novo usuário</li>
-                <li><strong>criar_musica(nome, artista, duracao)</strong> - Cria nova música</li>
-                <li><strong>criar_playlist(nome, id_usuario, musicas[])</strong> - Cria nova playlist</li>
-                <li><strong>obter_playlist(id_playlist)</strong> - Obtém playlist por ID</li>
-                <li><strong>listar_playlists_usuario(id_usuario)</strong> - Lista playlists de um usuário</li>
-                <li><strong>listar_musicas_playlist(id_playlist)</strong> - Lista músicas de uma playlist</li>
-                <li><strong>listar_playlists_com_musica(id_musica)</strong> - Lista playlists que contêm uma música</li>
-                <li><strong>obter_estatisticas()</strong> - Obtém estatísticas do serviço</li>
+                <li>listar_usuarios</li>
+                <li>listar_musicas</li>
+                <li>listar_playlists</li>
+                <li>listar_playlists_usuario</li>
+                <li>listar_musicas_playlist</li>
+                <li>listar_playlists_com_musica</li>
+                <li>obter_usuario</li>
+                <li>criar_usuario</li>
+                <li>criar_musica</li>
+                <li>criar_playlist</li>
+                <li>obter_playlist</li>
+                <li>obter_estatisticas</li>
             </ul>
+            <p>Para ver o WSDL, acesse: <a href="?wsdl">?wsdl</a></p>
         </body>
         </html>
         """
-        start_response('200 OK', [
-            ('Content-Type', 'text/html; charset=utf-8'),
-            ('Access-Control-Allow-Origin', '*')
-        ])
+        start_response('200 OK', [('Content-Type', 'text/html')])
         return [html.encode('utf-8')]
-    
-    # Requisições SOAP
-    app = criar_aplicacao_soap()
-    wsgi_app = WsgiApplication(app)
-    
+
     def start_response_com_cors(status, headers):
         """Adiciona headers CORS à resposta."""
-        headers.append(('Access-Control-Allow-Origin', '*'))
-        headers.append(('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'))
-        headers.append(('Access-Control-Allow-Headers', 'Content-Type, SOAPAction'))
+        headers.extend([
+            ('Access-Control-Allow-Origin', '*'),
+            ('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'),
+            ('Access-Control-Allow-Headers', 'Content-Type, SOAPAction')
+        ])
         return start_response(status, headers)
-    
-    return wsgi_app(environ, start_response_com_cors)
+
+    try:
+        # Process SOAP request
+        application = criar_aplicacao_soap()
+        wsgi_app = WsgiApplication(application)
+        return wsgi_app(environ, start_response_com_cors)
+    except Exception as e:
+        print(f"SOAP Error: {str(e)}")
+        error_response = f"""
+        <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+            <soap:Body>
+                <soap:Fault>
+                    <faultcode>soap:Server</faultcode>
+                    <faultstring>Internal Server Error</faultstring>
+                    <detail>
+                        <error>{str(e)}</error>
+                        <traceback>{traceback.format_exc()}</traceback>
+                    </detail>
+                </soap:Fault>
+            </soap:Body>
+        </soap:Envelope>
+        """
+        start_response_com_cors('500 Internal Server Error', [('Content-Type', 'text/xml')])
+        return [error_response.encode('utf-8')]
 
 def executar_servidor(host="0.0.0.0", port=8004):
     """Executa o servidor SOAP."""
-    print("Iniciando servidor SOAP...")
-    print(f"Host: {host}")
-    print(f"Porta: {port}")
-    print(f"WSDL: http://localhost:{port}/soap?wsdl")
-    print("=" * 50)
-
-    server = make_server(host, port, manipular_cors_e_roteamento)
+    print(f"Iniciando servidor SOAP em http://{host}:{port}")
+    print("Pressione Ctrl+C para encerrar")
     
-    try:
-        print("Servidor SOAP rodando. Pressione Ctrl+C para parar.")
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nServidor SOAP parado.")
+    application = criar_aplicacao_soap()
+    wsgi_app = WsgiApplication(application)
+    server = make_server(host, port, manipular_cors_e_roteamento)
+    server.serve_forever()
 
 if __name__ == '__main__':
     executar_servidor()
