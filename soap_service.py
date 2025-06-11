@@ -20,23 +20,31 @@ from spyne.server.wsgi import WsgiApplication
 from wsgiref.simple_server import make_server
 import json
 
-# ========== DADOS MOCK SIMPLES ==========
-USUARIOS = [
-    {"id": "user1", "nome": "João Silva", "idade": 25},
-    {"id": "user2", "nome": "Maria Santos", "idade": 30},
-    {"id": "user3", "nome": "Pedro Costa", "idade": 28}
-]
+# Usar dados reais gerados em ``data/``
+from data_loader import get_data_loader
 
+# Carrega dados uma única vez
+data_loader = get_data_loader()
+
+# Substitui os arrays mock com dados reais
+USUARIOS = data_loader.usuarios
 MUSICAS = [
-    {"id": "music1", "nome": "Bohemian Rhapsody", "artista": "Queen", "duracao": 355},
-    {"id": "music2", "nome": "Imagine", "artista": "John Lennon", "duracao": 183},
-    {"id": "music3", "nome": "Hotel California", "artista": "Eagles", "duracao": 391}
+    {
+        "id": m["id"],
+        "nome": m["nome"],
+        "artista": m["artista"],
+        "duracao": m.get("duracaoSegundos", m.get("duracao", 0)),
+    }
+    for m in data_loader.musicas
 ]
-
 PLAYLISTS = [
-    {"id": "playlist1", "nome": "Rock Clássico", "usuario": "user1", "musicas": ["music1", "music3"]},
-    {"id": "playlist2", "nome": "Chill", "usuario": "user2", "musicas": ["music2"]},
-    {"id": "playlist3", "nome": "Favoritas", "usuario": "user1", "musicas": ["music1", "music2"]}
+    {
+        "id": p["id"],
+        "nome": p["nome"],
+        "usuario": p["idUsuario"],
+        "musicas": p["musicas"],
+    }
+    for p in data_loader.playlists
 ]
 
 # ========== MODELOS SOAP ==========
@@ -84,6 +92,34 @@ class StreamingService(ServiceBase):
         """Lista playlists"""
         print("🟡 SOAP: listar_playlists chamado")
         return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in PLAYLISTS]
+
+    @rpc(Unicode, _returns=Array(Playlist))
+    def listar_playlists_usuario(ctx, id_usuario):
+        """Lista playlists de um usuário"""
+        print(f"🟡 SOAP: listar_playlists_usuario chamado para {id_usuario}")
+        playlists = [p for p in PLAYLISTS if p["usuario"] == id_usuario]
+        return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in playlists]
+
+    @rpc(Unicode, _returns=Array(Musica))
+    def listar_musicas_playlist(ctx, id_playlist):
+        """Lista músicas de uma playlist"""
+        print(f"🟡 SOAP: listar_musicas_playlist chamado para {id_playlist}")
+        playlist = next((p for p in PLAYLISTS if p["id"] == id_playlist), None)
+        if not playlist:
+            return []
+        musicas = []
+        for mid in playlist["musicas"]:
+            m = next((mu for mu in MUSICAS if mu["id"] == mid), None)
+            if m:
+                musicas.append(Musica(**m))
+        return musicas
+
+    @rpc(Unicode, _returns=Array(Playlist))
+    def listar_playlists_com_musica(ctx, id_musica):
+        """Lista playlists que contêm uma música"""
+        print(f"🟡 SOAP: listar_playlists_com_musica chamado para {id_musica}")
+        playlists = [p for p in PLAYLISTS if id_musica in p["musicas"]]
+        return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in playlists]
     
     @rpc(Unicode, _returns=Usuario)
     def buscar_usuario(ctx, user_id):
@@ -193,6 +229,9 @@ def handle_cors(environ, start_response):
                 <li>GetUser(id)</li>
                 <li>criar_playlist(id, nome, id_usuario, musicas[])</li>
                 <li>GetPlaylist(id)</li>
+                <li>listar_playlists_usuario(id_usuario)</li>
+                <li>listar_musicas_playlist(id_playlist)</li>
+                <li>listar_playlists_com_musica(id_musica)</li>
                 <li>obter_estatisticas()</li>
             </ul>
         </body>
