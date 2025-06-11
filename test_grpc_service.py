@@ -39,7 +39,7 @@ def test_list_users():
         response = stub.ListarTodosUsuarios(Empty())
         assert isinstance(response, UsuariosResponse)
         assert hasattr(response, 'usuarios')
-        assert hasattr(response.usuarios, '__iter__')
+        assert len(response.usuarios) > 0  # Verifica se tem usuários
         for user in response.usuarios:
             assert isinstance(user, Usuario)
             assert hasattr(user, 'id')

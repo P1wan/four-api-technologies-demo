@@ -150,8 +150,8 @@ def mostrar_banner():
     """Mostra o banner inicial com informações"""
     banner = """
 ╔══════════════════════════════════════════════════════════════╗
-║               TRABALHO DE COMPUTAÇÃO DISTRIBUÍDA               ║
-║        Comparação de Tecnologias de Invocação Remota          ║
+║               TRABALHO DE COMPUTAÇÃO DISTRIBUÍDA             ║
+║        Comparação de Tecnologias de Invocação Remota         ║
 ╚══════════════════════════════════════════════════════════════╝
 
 🎯 OBJETIVO: Demonstrar 4 tecnologias funcionando simultaneamente
