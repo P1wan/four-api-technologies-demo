@@ -32,7 +32,7 @@ from pathlib import Path
 # ========== IMPORTAR SISTEMA DE TESTES DE CARGA ==========
 # (Assumindo que o código do sistema de testes está em load_testing.py)
 try:
-    from load_testing_system import (
+    from load_testing import (
         LoadTestSuite, 
         LoadTestEngine,
         executar_sistema_testes_carga,

@@ -1,0 +1,145 @@
+RELATÓRIO DE TESTES DE CARGA
+==================================================
+Data: 11/06/2025 08:05:36
+Total de testes: 16
+
+RESUMO POR TECNOLOGIA:
+------------------------------
+REST:
+  Tempo médio: 37.35ms
+  RPS médio: 620.8
+  Taxa sucesso: 100.0%
+
+GraphQL:
+  Tempo médio: 3963.37ms
+  RPS médio: 7.3
+  Taxa sucesso: 100.0%
+
+SOAP:
+  Tempo médio: 47.98ms
+  RPS médio: 469.3
+  Taxa sucesso: 100.0%
+
+gRPC:
+  Tempo médio: 6.43ms
+  RPS médio: 2554.1
+  Taxa sucesso: 99.9%
+
+RESULTADOS DETALHADOS:
+------------------------------
+REST - listar_usuarios
+  Requisições: 9316
+  Sucesso: 100.0%
+  Tempo médio: 5.46ms
+  RPS: 575.8
+  Percentis: P50=2.0ms, P95=6.0ms
+
+REST - listar_musicas
+  Requisições: 10612
+  Sucesso: 100.0%
+  Tempo médio: 3.20ms
+  RPS: 706.7
+  Percentis: P50=2.5ms, P95=6.5ms
+
+GraphQL - listar_usuarios
+  Requisições: 140
+  Sucesso: 100.0%
+  Tempo médio: 1050.64ms
+  RPS: 9.2
+  Percentis: P50=931.9ms, P95=3018.8ms
+
+GraphQL - listar_musicas
+  Requisições: 84
+  Sucesso: 100.0%
+  Tempo médio: 1786.90ms
+  RPS: 5.4
+  Percentis: P50=1849.8ms, P95=2417.7ms
+
+SOAP - listar_usuarios
+  Requisições: 6668
+  Sucesso: 100.0%
+  Tempo médio: 11.62ms
+  RPS: 444.0
+  Percentis: P50=7.0ms, P95=10.0ms
+
+SOAP - listar_musicas
+  Requisições: 7714
+  Sucesso: 100.0%
+  Tempo médio: 8.71ms
+  RPS: 480.5
+  Percentis: P50=7.5ms, P95=11.5ms
+
+gRPC - listar_usuarios
+  Requisições: 12529
+  Sucesso: 99.9%
+  Tempo médio: 6.49ms
+  RPS: 834.7
+  Percentis: P50=6.5ms, P95=9.2ms
+  Erros: 1 tipos únicos
+
+gRPC - listar_musicas
+  Requisições: 12608
+  Sucesso: 99.9%
+  Tempo médio: 6.47ms
+  RPS: 838.8
+  Percentis: P50=6.5ms, P95=9.2ms
+  Erros: 1 tipos únicos
+
+REST - listar_usuarios
+  Requisições: 9519
+  Sucesso: 100.0%
+  Tempo médio: 74.89ms
+  RPS: 566.8
+  Percentis: P50=3.0ms, P95=18.6ms
+
+REST - listar_musicas
+  Requisições: 10664
+  Sucesso: 100.0%
+  Tempo médio: 65.83ms
+  RPS: 634.1
+  Percentis: P50=3.5ms, P95=18.2ms
+
+GraphQL - listar_usuarios
+  Requisições: 165
+  Sucesso: 100.0%
+  Tempo médio: 5080.86ms
+  RPS: 9.3
+  Percentis: P50=3487.3ms, P95=17366.2ms
+
+GraphQL - listar_musicas
+  Requisições: 114
+  Sucesso: 100.0%
+  Tempo médio: 7935.10ms
+  RPS: 5.4
+  Percentis: P50=5607.0ms, P95=19754.8ms
+
+SOAP - listar_usuarios
+  Requisições: 7545
+  Sucesso: 100.0%
+  Tempo médio: 92.27ms
+  RPS: 442.7
+  Percentis: P50=8.3ms, P95=32.0ms
+
+SOAP - listar_musicas
+  Requisições: 8705
+  Sucesso: 100.0%
+  Tempo médio: 79.33ms
+  RPS: 510.2
+  Percentis: P50=8.5ms, P95=30.5ms
+
+gRPC - listar_usuarios
+  Requisições: 64013
+  Sucesso: 99.9%
+  Tempo médio: 6.38ms
+  RPS: 4262.4
+  Percentis: P50=6.4ms, P95=9.1ms
+  Erros: 1 tipos únicos
+
+gRPC - listar_musicas
+  Requisições: 64289
+  Sucesso: 99.9%
+  Tempo médio: 6.37ms
+  RPS: 4280.5
+  Percentis: P50=6.4ms, P95=9.1ms
+  Erros: 1 tipos únicos
+

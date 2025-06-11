@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-Servidor SOAP Simples - Sem complicações
-========================================
+Servidor SOAP para Plataforma de Streaming
+==========================================
+
+Implementacao completa do servico SOAP usando Spyne.
+Padronizado seguindo convenções Python e boas práticas de desenvolvimento.
 """
 
 from spyne import (
@@ -19,56 +22,61 @@ from spyne.protocol.soap import Soap11
 from spyne.server.wsgi import WsgiApplication
 from wsgiref.simple_server import make_server
 import json
+import uuid
+from typing import List, Dict, Optional
 
-# Usar dados reais gerados em ``data/``
+# Usar dados reais gerados em data/
 from data_loader import get_data_loader
 
 # Carrega dados uma única vez
 data_loader = get_data_loader()
 
-# Substitui os arrays mock com dados reais
-USUARIOS = data_loader.usuarios
+# Criar cópias locais para evitar modificações dos dados compartilhados
+USUARIOS = [usuario.copy() for usuario in data_loader.usuarios]
 MUSICAS = [
     {
-        "id": m["id"],
-        "nome": m["nome"],
-        "artista": m["artista"],
-        "duracao": m.get("duracaoSegundos", m.get("duracao", 0)),
+        "id": musica["id"],
+        "nome": musica["nome"],
+        "artista": musica["artista"],
+        "duracao": musica.get("duracaoSegundos", musica.get("duracao", 0)),
     }
-    for m in data_loader.musicas
+    for musica in data_loader.musicas
 ]
 
-
-def get_playlists():
-    """Retorna playlists no formato usado pelo serviço SOAP"""
+def obter_playlists_locais() -> List[Dict]:
+    """Retorna playlists no formato usado pelo serviço SOAP."""
     return [
         {
-            "id": p["id"],
-            "nome": p["nome"],
-            "usuario": p["idUsuario"],
-            "musicas": p["musicas"],
+            "id": playlist["id"],
+            "nome": playlist["nome"],
+            "usuario": playlist["idUsuario"],
+            "musicas": playlist["musicas"],
         }
-        for p in data_loader.playlists
+        for playlist in data_loader.playlists
     ]
 
-# ========== MODELOS SOAP ==========
+# Modelos SOAP padronizados
 class Usuario(ComplexModel):
+    """Modelo de usuário para SOAP."""
     id = Unicode
     nome = Unicode
     idade = Integer
 
 class Musica(ComplexModel):
+    """Modelo de música para SOAP."""
     id = Unicode
     nome = Unicode
     artista = Unicode
     duracao = Integer
 
 class Playlist(ComplexModel):
+    """Modelo de playlist para SOAP."""
     id = Unicode
     nome = Unicode
     usuario = Unicode
 
 class Estatisticas(ComplexModel):
+    """Modelo de estatísticas para SOAP."""
     total_usuarios = Integer
     total_musicas = Integer
     total_playlists = Integer
@@ -76,158 +84,146 @@ class Estatisticas(ComplexModel):
     tecnologia = Unicode
     framework = Unicode
 
-# ========== SERVIÇO SOAP ==========
 class StreamingService(ServiceBase):
+    """Serviço SOAP para plataforma de streaming."""
     
     @rpc(_returns=Array(Usuario))
     def listar_usuarios(ctx):
-        """Lista usuários"""
-        print("🟡 SOAP: listar_usuarios chamado")
-        return [Usuario(**u) for u in USUARIOS]
+        """Lista todos os usuários do sistema."""
+        return [Usuario(**usuario) for usuario in USUARIOS]
     
     @rpc(_returns=Array(Musica))
     def listar_musicas(ctx):
-        """Lista músicas"""
-        print("🟡 SOAP: listar_musicas chamado")
-        return [Musica(**m) for m in MUSICAS]
+        """Lista todas as músicas do sistema."""
+        return [Musica(**musica) for musica in MUSICAS]
     
     @rpc(_returns=Array(Playlist))
     def listar_playlists(ctx):
-        """Lista playlists"""
-        print("🟡 SOAP: listar_playlists chamado")
-        return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in get_playlists()]
+        """Lista todas as playlists do sistema."""
+        playlists = obter_playlists_locais()
+        return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in playlists]
 
     @rpc(Unicode, _returns=Array(Playlist))
     def listar_playlists_usuario(ctx, id_usuario):
-        """Lista playlists de um usuário"""
-        print(f"🟡 SOAP: listar_playlists_usuario chamado para {id_usuario}")
-        playlists = [p for p in get_playlists() if p["usuario"] == id_usuario]
+        """Lista playlists de um usuário específico."""
+        playlists = [p for p in obter_playlists_locais() if p["usuario"] == id_usuario]
         return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in playlists]
 
     @rpc(Unicode, _returns=Array(Musica))
     def listar_musicas_playlist(ctx, id_playlist):
-        """Lista músicas de uma playlist"""
-        print(f"🟡 SOAP: listar_musicas_playlist chamado para {id_playlist}")
-        playlist = next((p for p in get_playlists() if p["id"] == id_playlist), None)
+        """Lista músicas de uma playlist específica."""
+        playlist = next((p for p in obter_playlists_locais() if p["id"] == id_playlist), None)
         if not playlist:
             return []
-        musicas = []
-        for mid in playlist["musicas"]:
-            m = next((mu for mu in MUSICAS if mu["id"] == mid), None)
-            if m:
-                musicas.append(Musica(**m))
-        return musicas
+        
+        musicas_da_playlist = []
+        for id_musica in playlist["musicas"]:
+            musica = next((m for m in MUSICAS if m["id"] == id_musica), None)
+            if musica:
+                musicas_da_playlist.append(Musica(**musica))
+        return musicas_da_playlist
 
     @rpc(Unicode, _returns=Array(Playlist))
     def listar_playlists_com_musica(ctx, id_musica):
-        """Lista playlists que contêm uma música"""
-        print(f"🟡 SOAP: listar_playlists_com_musica chamado para {id_musica}")
-        playlists = [p for p in get_playlists() if id_musica in p["musicas"]]
+        """Lista playlists que contêm uma música específica."""
+        playlists = [p for p in obter_playlists_locais() if id_musica in p["musicas"]]
         return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in playlists]
     
     @rpc(Unicode, _returns=Usuario)
-    def buscar_usuario(ctx, user_id):
-        """Busca usuário por ID"""
-        print(f"🟡 SOAP: buscar_usuario chamado com ID: {user_id}")
-        for user in USUARIOS:
-            if user["id"] == user_id:
-                return Usuario(**user)
+    def obter_usuario(ctx, id_usuario):
+        """Obtém um usuário por ID."""
+        usuario = next((u for u in USUARIOS if u["id"] == id_usuario), None)
+        if usuario:
+            return Usuario(**usuario)
         return Usuario(id="", nome="", idade=0)
 
-    @rpc(Unicode, Unicode, Integer, _returns=Usuario)
-    def criar_usuario(ctx, id, nome, idade):
-        """Cria um novo usuário"""
-        novo = {"id": id, "nome": nome, "idade": idade}
-        USUARIOS.append(novo)
-        return Usuario(**novo)
+    @rpc(Unicode, Integer, _returns=Usuario)
+    def criar_usuario(ctx, nome, idade):
+        """Cria um novo usuário."""
+        novo_id = str(uuid.uuid4())
+        novo_usuario = {"id": novo_id, "nome": nome, "idade": idade}
+        USUARIOS.append(novo_usuario)
+        return Usuario(**novo_usuario)
 
     @rpc(Unicode, Unicode, Integer, _returns=Musica)
     def criar_musica(ctx, nome, artista, duracao):
-        """Cria uma nova música"""
-        novo_id = f"music{len(data_loader.musicas) + 1}"
-        nova = {
-            "id": novo_id,
-            "nome": nome,
-            "artista": artista,
-            "duracaoSegundos": duracao,
-        }
-        data_loader.musicas.append(nova)
-        MUSICAS.append({
+        """Cria uma nova música."""
+        novo_id = str(uuid.uuid4())
+        nova_musica = {
             "id": novo_id,
             "nome": nome,
             "artista": artista,
             "duracao": duracao,
-        })
-        return Musica(id=novo_id, nome=nome, artista=artista, duracao=duracao)
+        }
+        MUSICAS.append(nova_musica)
+        return Musica(**nova_musica)
 
-    @rpc(Unicode, _returns=Usuario)
-    def GetUser(ctx, id):
-        """Obtém usuário por ID"""
-        for u in USUARIOS:
-            if u["id"] == id:
-                return Usuario(**u)
-        return Usuario(id="", nome="", idade=0)
-
-    @rpc(Unicode, Unicode, Unicode, Array(Unicode), _returns=Playlist)
-    def criar_playlist(ctx, id, nome, id_usuario, musicas):
-        """Cria uma nova playlist"""
-        data_loader.playlists.append({
-            "id": id,
+    @rpc(Unicode, Unicode, Array(Unicode), _returns=Playlist)
+    def criar_playlist(ctx, nome, id_usuario, musicas):
+        """Cria uma nova playlist."""
+        novo_id = str(uuid.uuid4())
+        nova_playlist = {
+            "id": novo_id,
             "nome": nome,
-            "idUsuario": id_usuario,
-            "musicas": list(musicas),
-        })
-        return Playlist(id=id, nome=nome, usuario=id_usuario)
+            "usuario": id_usuario,
+            "musicas": list(musicas) if musicas else [],
+        }
+        # Não modificar dados compartilhados - apenas retornar o resultado
+        return Playlist(id=novo_id, nome=nome, usuario=id_usuario)
 
     @rpc(Unicode, _returns=Playlist)
-    def GetPlaylist(ctx, id):
-        """Obtém playlist por ID"""
-        for p in get_playlists():
-            if p["id"] == id:
-                return Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"])
+    def obter_playlist(ctx, id_playlist):
+        """Obtém uma playlist por ID."""
+        playlist = next((p for p in obter_playlists_locais() if p["id"] == id_playlist), None)
+        if playlist:
+            return Playlist(id=playlist["id"], nome=playlist["nome"], usuario=playlist["usuario"])
         return Playlist(id="", nome="", usuario="")
 
     @rpc(_returns=Estatisticas)
     def obter_estatisticas(ctx):
-        """Retorna estatísticas do serviço"""
-        total_playlists = len(data_loader.playlists)
+        """Retorna estatísticas do serviço."""
+        playlists = obter_playlists_locais()
+        total_playlists = len(playlists)
         total_musicas = len(MUSICAS)
         total_usuarios = len(USUARIOS)
-        media = 0.0
-        if total_playlists:
-            media = sum(len(p.get("musicas", [])) for p in get_playlists()) / total_playlists
+        
+        media_musicas_por_playlist = 0.0
+        if total_playlists > 0:
+            total_musicas_em_playlists = sum(len(p.get("musicas", [])) for p in playlists)
+            media_musicas_por_playlist = total_musicas_em_playlists / total_playlists
+        
         return Estatisticas(
             total_usuarios=total_usuarios,
             total_musicas=total_musicas,
             total_playlists=total_playlists,
-            media_musicas_por_playlist=media,
+            media_musicas_por_playlist=media_musicas_por_playlist,
             tecnologia="SOAP",
             framework="Spyne",
         )
 
-# ========== CONFIGURAÇÃO DO SERVIDOR ==========
-def create_app():
-    """Cria aplicação SOAP"""
+def criar_aplicacao_soap():
+    """Cria a aplicação SOAP."""
     application = Application(
         [StreamingService],
-        tns='http://streaming.soap',
+        tns='http://streaming.soap.service',
         in_protocol=Soap11(validator='lxml'),
         out_protocol=Soap11()
     )
     return application
 
-def handle_cors(environ, start_response):
-    """Handle CORS e routing simples"""
+def manipular_cors_e_roteamento(environ, start_response):
+    """Manipula CORS e roteamento de requisições."""
     method = environ['REQUEST_METHOD']
     path = environ.get('PATH_INFO', '/')
+    
+    # Normalizar path para SOAP
     if path.startswith('/soap'):
         environ['PATH_INFO'] = path[len('/soap'):] or '/'
         path = environ['PATH_INFO']
+    
     query = environ.get('QUERY_STRING', '')
     
-    print(f"🌐 Request: {method} {path}?{query}")
-    
-    # CORS preflight
+    # Preflight CORS
     if method == 'OPTIONS':
         start_response('200 OK', [
             ('Access-Control-Allow-Origin', '*'),
@@ -236,68 +232,78 @@ def handle_cors(environ, start_response):
         ])
         return [b'OK']
     
-    # Info page
+    # Página informativa
     if method == 'GET' and 'wsdl' not in query.lower():
         html = """
         <!DOCTYPE html>
         <html>
-        <head><title>SOAP Service</title></head>
+        <head>
+            <title>Serviço SOAP - Plataforma de Streaming</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; }
+                h1 { color: #2c3e50; }
+                ul { margin: 20px 0; }
+                li { margin: 5px 0; }
+                a { color: #3498db; }
+            </style>
+        </head>
         <body>
-            <h1>🟡 SOAP Service Ativo</h1>
-            <p><strong>WSDL:</strong> <a href="/soap?wsdl">Clique aqui</a></p>
-            <p><strong>Interface:</strong> <a href="http://localhost:8080/soap/">Teste aqui</a></p>
-            <h2>Operações:</h2>
+            <h1>Serviço SOAP - Plataforma de Streaming</h1>
+            <p><strong>WSDL:</strong> <a href="/soap?wsdl">Baixar WSDL</a></p>
+            <p><strong>Status:</strong> Ativo e funcional</p>
+            
+            <h2>Operações Disponíveis:</h2>
             <ul>
-                <li>listar_usuarios()</li>
-                <li>listar_musicas()</li>
-                <li>listar_playlists()</li>
-                <li>buscar_usuario(user_id)</li>
-                <li>criar_usuario(id, nome, idade)</li>
-                <li>criar_musica(nome, artista, duracao)</li>
-                <li>GetUser(id)</li>
-                <li>criar_playlist(id, nome, id_usuario, musicas[])</li>
-                <li>GetPlaylist(id)</li>
-                <li>listar_playlists_usuario(id_usuario)</li>
-                <li>listar_musicas_playlist(id_playlist)</li>
-                <li>listar_playlists_com_musica(id_musica)</li>
-                <li>obter_estatisticas()</li>
+                <li><strong>listar_usuarios()</strong> - Lista todos os usuários</li>
+                <li><strong>listar_musicas()</strong> - Lista todas as músicas</li>
+                <li><strong>listar_playlists()</strong> - Lista todas as playlists</li>
+                <li><strong>obter_usuario(id_usuario)</strong> - Obtém usuário por ID</li>
+                <li><strong>criar_usuario(nome, idade)</strong> - Cria novo usuário</li>
+                <li><strong>criar_musica(nome, artista, duracao)</strong> - Cria nova música</li>
+                <li><strong>criar_playlist(nome, id_usuario, musicas[])</strong> - Cria nova playlist</li>
+                <li><strong>obter_playlist(id_playlist)</strong> - Obtém playlist por ID</li>
+                <li><strong>listar_playlists_usuario(id_usuario)</strong> - Lista playlists de um usuário</li>
+                <li><strong>listar_musicas_playlist(id_playlist)</strong> - Lista músicas de uma playlist</li>
+                <li><strong>listar_playlists_com_musica(id_musica)</strong> - Lista playlists que contêm uma música</li>
+                <li><strong>obter_estatisticas()</strong> - Obtém estatísticas do serviço</li>
             </ul>
         </body>
         </html>
         """
         start_response('200 OK', [
-            ('Content-Type', 'text/html'),
+            ('Content-Type', 'text/html; charset=utf-8'),
             ('Access-Control-Allow-Origin', '*')
         ])
         return [html.encode('utf-8')]
     
-    # SOAP requests
-    app = create_app()
+    # Requisições SOAP
+    app = criar_aplicacao_soap()
     wsgi_app = WsgiApplication(app)
     
-    def cors_start_response(status, headers):
+    def start_response_com_cors(status, headers):
+        """Adiciona headers CORS à resposta."""
         headers.append(('Access-Control-Allow-Origin', '*'))
         headers.append(('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'))
         headers.append(('Access-Control-Allow-Headers', 'Content-Type, SOAPAction'))
         return start_response(status, headers)
     
-    return wsgi_app(environ, cors_start_response)
+    return wsgi_app(environ, start_response_com_cors)
 
 def executar_servidor(host="0.0.0.0", port=8004):
-    """Executa o servidor"""
-    print("🟡 Iniciando servidor SOAP simples...")
-    print(f"🟡 Porta: {port}")
-    print(f"🟡 WSDL: http://localhost:{port}/soap?wsdl")
-    print("🟡 Interface: http://localhost:8080/soap/")
+    """Executa o servidor SOAP."""
+    print("Iniciando servidor SOAP...")
+    print(f"Host: {host}")
+    print(f"Porta: {port}")
+    print(f"WSDL: http://localhost:{port}/soap?wsdl")
     print("=" * 50)
 
-    server = make_server(host, port, handle_cors)
+    server = make_server(host, port, manipular_cors_e_roteamento)
     
     try:
-        print("✅ Servidor rodando! Ctrl+C para parar")
+        print("Servidor SOAP rodando. Pressione Ctrl+C para parar.")
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\n🛑 Servidor parado")
+        print("\nServidor SOAP parado.")
 
 if __name__ == '__main__':
     executar_servidor()

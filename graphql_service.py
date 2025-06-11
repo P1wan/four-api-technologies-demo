@@ -1,14 +1,9 @@
 """
-Serviço GraphQL para Streaming de Músicas - Strawberry
-======================================================
+Serviço GraphQL para Plataforma de Streaming
+============================================
 
 Implementação completa do serviço GraphQL usando Strawberry.
-Otimizado para execução em ambientes web como Replit.
-
-Para executar:
-1. pip install strawberry-graphql[fastapi] uvicorn
-2. uvicorn graphql_service:app --host 0.0.0.0 --port 8001
-3. Acesse: http://localhost:8001/graphql para GraphiQL
+Padronizado seguindo convenções Python e boas práticas de desenvolvimento.
 """
 
 import strawberry
@@ -21,32 +16,32 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
 
-# Data loader used by all backends
+# Data loader usado por todos os backends
 from data_loader import get_data_loader
 from dataloaders import GraphQLDataLoaders
 
-# ========== TIPOS GRAPHQL ==========
+# Tipos GraphQL padronizados
 
 @dataclass
 class ValidationError(Exception):
-    """Custom validation error for GraphQL"""
+    """Erro de validação customizado para GraphQL."""
     message: str
     field: str
 
-def validate_nome(nome: str, field: str = "nome") -> None:
-    """Validates a name field"""
+def validar_nome(nome: str, campo: str = "nome") -> None:
+    """Valida um campo de nome."""
     if not nome or len(nome.strip()) == 0:
-        raise ValidationError("Nome não pode ser vazio", field)
+        raise ValidationError("Nome não pode ser vazio", campo)
     if len(nome) > 100:
-        raise ValidationError("Nome muito longo (máximo 100 caracteres)", field)
+        raise ValidationError("Nome muito longo (máximo 100 caracteres)", campo)
 
-def validate_idade(idade: int) -> None:
-    """Validates age field"""
+def validar_idade(idade: int) -> None:
+    """Valida campo de idade."""
     if idade < 0 or idade > 120:
         raise ValidationError("Idade inválida (deve estar entre 0 e 120)", "idade")
 
-def validate_duracao(duracao: int) -> None:
-    """Validates song duration"""
+def validar_duracao(duracao: int) -> None:
+    """Valida duração da música."""
     if duracao <= 0 or duracao > 3600:
         raise ValidationError("Duração inválida (deve estar entre 1 e 3600 segundos)", "duracao")
 
@@ -66,6 +61,7 @@ class Musica:
     id: str
     nome: str
     artista: str
+    # Manter consistência: usar snake_case no GraphQL, converter de camelCase do JSON
     duracao_segundos: int
 
 @strawberry.input
@@ -89,7 +85,7 @@ class PlaylistInput:
 
 @strawberry.type
 class PlaylistCompleta:
-    """Playlist com dados completos das músicas"""
+    """Playlist com dados completos das músicas."""
     id: str
     nome: str
     usuario: Usuario
@@ -104,19 +100,16 @@ class Estatisticas:
     media_musicas_por_playlist: float
     tecnologia: str
 
-# ========== CONTEXT ==========
-
 @dataclass
 class GraphQLContext:
-    """GraphQL context with DataLoaders"""
+    """Contexto GraphQL com DataLoaders."""
     loaders: GraphQLDataLoaders
 
     def __init__(self, loaders: GraphQLDataLoaders):
         self.loaders = loaders
 
-# ========== DATA LOADER (Simulação) ==========
-
-class GraphQLDataLoader:
+# Data Loader para fallback (somente para demonstração)
+class GraphQLDataLoaderFallback:
     """Loader de dados mock utilizado apenas para ambientes de demonstração."""
 
     def __init__(self):
@@ -144,47 +137,45 @@ class GraphQLDataLoader:
             {"id": "playlist4", "nome": "Workout Mix", "idUsuario": "user3", "musicas": ["music2", "music4", "music7"]}
         ]
 
-        print("✅ GraphQL Data Loader (mock) inicializado")
-        print(f"Loaded {len(self.usuarios)} users, {len(self.musicas)} songs, {len(self.playlists)} playlists")
-        print("Sample playlist data:", self.playlists[0] if self.playlists else "No playlists")
+        print("GraphQL Data Loader (fallback) inicializado")
 
-    def get_usuario(self, id: str) -> Optional[dict]:
-        """Get user by ID with error handling"""
-        usuario = next((u for u in self.usuarios if u["id"] == id), None)
+    def obter_usuario(self, id_usuario: str) -> Optional[dict]:
+        """Obtém usuário por ID com tratamento de erro."""
+        usuario = next((u for u in self.usuarios if u["id"] == id_usuario), None)
         if not usuario:
-            raise ValidationError(f"Usuário não encontrado: {id}", "id")
+            raise ValidationError(f"Usuário não encontrado: {id_usuario}", "id")
         return usuario
 
-    def get_musica(self, id: str) -> Optional[dict]:
-        """Get music by ID with error handling"""
-        musica = next((m for m in self.musicas if m["id"] == id), None)
+    def obter_musica(self, id_musica: str) -> Optional[dict]:
+        """Obtém música por ID com tratamento de erro."""
+        musica = next((m for m in self.musicas if m["id"] == id_musica), None)
         if not musica:
-            raise ValidationError(f"Música não encontrada: {id}", "id")
+            raise ValidationError(f"Música não encontrada: {id_musica}", "id")
         return musica
 
-    def get_playlist(self, id: str) -> Optional[dict]:
-        """Get playlist by ID with error handling"""
-        playlist = next((p for p in self.playlists if p["id"] == id), None)
+    def obter_playlist(self, id_playlist: str) -> Optional[dict]:
+        """Obtém playlist por ID com tratamento de erro."""
+        playlist = next((p for p in self.playlists if p["id"] == id_playlist), None)
         if not playlist:
-            raise ValidationError(f"Playlist não encontrada: {id}", "id")
+            raise ValidationError(f"Playlist não encontrada: {id_playlist}", "id")
         return playlist
 
 # Instância global: tenta usar dados reais e faz fallback para o mock
 try:
     data_loader = get_data_loader()
-    print("✅ Dados reais carregados para GraphQL")
+    print("Dados reais carregados para GraphQL")
 except Exception as exc:
-    print(f"⚠️  Erro ao carregar dados reais: {exc}")
-    print("🔄 Utilizando GraphQLDataLoader mock")
-    data_loader = GraphQLDataLoader()
+    print(f"Erro ao carregar dados reais: {exc}")
+    print("Utilizando GraphQL fallback")
+    data_loader = GraphQLDataLoaderFallback()
 
-# ========== RESOLVERS ==========
+# Resolvers GraphQL
 
 @strawberry.type
 class Query:
     @strawberry.field
     async def usuarios(self, info) -> List[Usuario]:
-        """List all users"""
+        """Lista todos os usuários."""
         usuarios = info.context["loaders"].data_loader.usuarios
         return [
             Usuario(id=u["id"], nome=u["nome"], idade=u["idade"])
@@ -193,13 +184,14 @@ class Query:
 
     @strawberry.field
     async def musicas(self, info) -> List[Musica]:
-        """List all songs"""
+        """Lista todas as músicas."""
         musicas = info.context["loaders"].data_loader.musicas
         return [
             Musica(
                 id=m["id"],
                 nome=m["nome"],
                 artista=m["artista"],
+                # Conversão: duracaoSegundos (JSON) -> duracao_segundos (GraphQL)
                 duracao_segundos=m["duracaoSegundos"]
             )
             for m in musicas
@@ -207,31 +199,24 @@ class Query:
 
     @strawberry.field
     async def usuario(self, info, id: str) -> Optional[Usuario]:
-        """Get user by ID"""
+        """Obtém um usuário por ID."""
         try:
-            usuario_data = await info.context.loaders.get_usuario(id)
-            return Usuario(
-                id=usuario_data["id"],
-                nome=usuario_data["nome"],
-                idade=usuario_data["idade"]
-            )
-        except ValidationError:
+            if hasattr(info.context["loaders"].data_loader, 'obter_usuario_por_id'):
+                usuario = info.context["loaders"].data_loader.obter_usuario_por_id(id)
+            else:
+                usuario = info.context["loaders"].data_loader.obter_usuario(id)
+            
+            if usuario:
+                return Usuario(id=usuario["id"], nome=usuario["nome"], idade=usuario["idade"])
+            return None
+        except Exception:
             return None
 
     @strawberry.field
     async def playlists_usuario(self, info, id_usuario: str) -> List[Playlist]:
-        """List playlists for a user"""
+        """Lista playlists de um usuário."""
         try:
-            # Get playlists directly from data loader
-            playlists = [
-                p for p in info.context["loaders"].data_loader.playlists 
-                if p["idUsuario"] == id_usuario
-            ]
-            
-            if not playlists:
-                print(f"No playlists found for user {id_usuario}")
-                return []
-            
+            playlists = info.context["loaders"].data_loader.listar_playlists_usuario(id_usuario)
             return [
                 Playlist(
                     id=p["id"],
@@ -241,16 +226,14 @@ class Query:
                 )
                 for p in playlists
             ]
-        except Exception as e:
-            print(f"Error in playlists_usuario resolver: {str(e)}")
+        except Exception:
             return []
 
     @strawberry.field
     async def musicas_playlist(self, info, id_playlist: str) -> List[Musica]:
-        """List songs in a playlist"""
+        """Lista músicas de uma playlist."""
         try:
-            playlist = await info.context["loaders"].get_playlist(id_playlist)
-            musicas = await info.context["loaders"].get_musicas(playlist["musicas"])
+            musicas = info.context["loaders"].data_loader.listar_musicas_playlist(id_playlist)
             return [
                 Musica(
                     id=m["id"],
@@ -260,18 +243,14 @@ class Query:
                 )
                 for m in musicas
             ]
-        except ValidationError:
+        except Exception:
             return []
 
     @strawberry.field
     async def playlists_com_musica(self, info, id_musica: str) -> List[Playlist]:
-        """List playlists containing a song"""
+        """Lista playlists que contêm uma música."""
         try:
-            await info.context["loaders"].get_musica(id_musica)  # Validate song exists
-            playlists = [
-                p for p in info.context["loaders"].data_loader.playlists 
-                if id_musica in p["musicas"]
-            ]
+            playlists = info.context["loaders"].data_loader.listar_playlists_com_musica(id_musica)
             return [
                 Playlist(
                     id=p["id"],
@@ -281,25 +260,35 @@ class Query:
                 )
                 for p in playlists
             ]
-        except ValidationError:
+        except Exception:
             return []
 
     @strawberry.field
     async def playlist_completa(self, info, id_playlist: str) -> Optional[PlaylistCompleta]:
-        """Get playlist with complete data"""
+        """Obtém playlist com dados completos."""
         try:
-            playlist = await info.context["loaders"].get_playlist(id_playlist)
-            usuario = await info.context["loaders"].get_usuario(playlist["idUsuario"])
-            musicas = await info.context["loaders"].get_musicas(playlist["musicas"])
+            # Obter playlist
+            if hasattr(info.context["loaders"].data_loader, 'obter_playlist_por_id'):
+                playlist = info.context["loaders"].data_loader.obter_playlist_por_id(id_playlist)
+            else:
+                playlist = info.context["loaders"].data_loader.obter_playlist(id_playlist)
             
+            if not playlist:
+                return None
+
+            # Obter usuário
+            if hasattr(info.context["loaders"].data_loader, 'obter_usuario_por_id'):
+                usuario_data = info.context["loaders"].data_loader.obter_usuario_por_id(playlist["idUsuario"])
+            else:
+                usuario_data = info.context["loaders"].data_loader.obter_usuario(playlist["idUsuario"])
+
+            # Obter músicas
+            musicas = info.context["loaders"].data_loader.listar_musicas_playlist(id_playlist)
+
             return PlaylistCompleta(
                 id=playlist["id"],
                 nome=playlist["nome"],
-                usuario=Usuario(
-                    id=usuario["id"],
-                    nome=usuario["nome"],
-                    idade=usuario["idade"]
-                ),
+                usuario=Usuario(**usuario_data),
                 musicas=[
                     Musica(
                         id=m["id"],
@@ -310,203 +299,271 @@ class Query:
                     for m in musicas
                 ]
             )
-        except ValidationError:
+        except Exception:
             return None
 
     @strawberry.field
     async def estatisticas(self, info) -> Estatisticas:
-        """Get service statistics"""
-        total_musicas_em_playlists = sum(
-            len(p["musicas"]) 
-            for p in info.context["loaders"].data_loader.playlists
-        )
-        usuarios_com_playlists = len(set(
-            p["idUsuario"] 
-            for p in info.context["loaders"].data_loader.playlists
-        ))
-
-        return Estatisticas(
-            total_usuarios=len(info.context["loaders"].data_loader.usuarios),
-            total_musicas=len(info.context["loaders"].data_loader.musicas),
-            total_playlists=len(info.context["loaders"].data_loader.playlists),
-            usuarios_com_playlists=usuarios_com_playlists,
-            media_musicas_por_playlist=total_musicas_em_playlists / len(info.context["loaders"].data_loader.playlists) if info.context["loaders"].data_loader.playlists else 0,
-            tecnologia="GraphQL"
-        )
-
-# ========== MUTATIONS (Opcional) ==========
+        """Obtém estatísticas do serviço."""
+        try:
+            stats = info.context["loaders"].data_loader.obter_estatisticas()
+            return Estatisticas(
+                total_usuarios=stats.get('total_usuarios', 0),
+                total_musicas=stats.get('total_musicas', 0),
+                total_playlists=stats.get('total_playlists', 0),
+                usuarios_com_playlists=stats.get('usuarios_com_playlists', 0),
+                media_musicas_por_playlist=stats.get('media_musicas_por_playlist', 0.0),
+                tecnologia="GraphQL"
+            )
+        except Exception:
+            return Estatisticas(
+                total_usuarios=0,
+                total_musicas=0,
+                total_playlists=0,
+                usuarios_com_playlists=0,
+                media_musicas_por_playlist=0.0,
+                tecnologia="GraphQL"
+            )
 
 @strawberry.type
 class Mutation:
-
     @strawberry.mutation
     def criar_usuario(self, input: UsuarioInput) -> Usuario:
-        """Creates a new user with validation"""
+        """Cria um novo usuário."""
         try:
-            validate_nome(input.nome)
-            validate_idade(input.idade)
+            validar_nome(input.nome)
+            validar_idade(input.idade)
             
-            novo_id = f"user{len(data_loader.usuarios) + 1}"
+            import uuid
+            novo_id = str(uuid.uuid4())
             novo_usuario = {
                 "id": novo_id,
                 "nome": input.nome,
                 "idade": input.idade
             }
+            
+            # Para demonstração, adicionar à lista local (não persistente)
             data_loader.usuarios.append(novo_usuario)
             
-            return Usuario(**novo_usuario)
+            return Usuario(id=novo_id, nome=input.nome, idade=input.idade)
         except ValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise Exception(f"Erro de validação: {e.message}")
 
     @strawberry.mutation
     def criar_musica(self, input: MusicaInput) -> Musica:
-        """Creates a new song with validation"""
+        """Cria uma nova música."""
         try:
-            validate_nome(input.nome, "nome")
-            validate_nome(input.artista, "artista")
-            validate_duracao(input.duracao_segundos)
+            validar_nome(input.nome)
+            validar_nome(input.artista, "artista")
+            validar_duracao(input.duracao_segundos)
             
-            novo_id = f"music{len(data_loader.musicas) + 1}"
-            nova_musica = {
-                "id": novo_id,
-                "nome": input.nome,
-                "artista": input.artista,
-                "duracaoSegundos": input.duracao_segundos
-            }
-            data_loader.musicas.append(nova_musica)
+            import uuid
+            novo_id = str(uuid.uuid4())
             
-            return Musica(**nova_musica)
+            # Para demonstração: não modificar dados compartilhados
+            # Em produção: salvar no banco de dados
+            return Musica(
+                id=novo_id,
+                nome=input.nome,
+                artista=input.artista,
+                duracao_segundos=input.duracao_segundos
+            )
         except ValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise Exception(f"Erro de validação: {e.message}")
 
     @strawberry.mutation
     def criar_playlist(self, input: PlaylistInput) -> Playlist:
-        """Creates a new playlist with validation"""
+        """Cria uma nova playlist."""
         try:
-            validate_nome(input.nome)
+            validar_nome(input.nome)
             
-            # Validate user exists
-            data_loader.get_usuario(input.id_usuario)
+            # Verificar se usuário existe
+            if hasattr(data_loader, 'obter_usuario_por_id'):
+                usuario = data_loader.obter_usuario_por_id(input.id_usuario)
+            else:
+                usuario = data_loader.obter_usuario(input.id_usuario)
             
-            # Validate all music IDs exist
+            if not usuario:
+                raise ValidationError("Usuário não encontrado", "id_usuario")
+            
+            # Verificar se músicas existem
             for id_musica in input.musicas:
-                data_loader.get_musica(id_musica)
+                if hasattr(data_loader, 'obter_musica_por_id'):
+                    musica = data_loader.obter_musica_por_id(id_musica)
+                else:
+                    musica = data_loader.obter_musica(id_musica)
+                
+                if not musica:
+                    raise ValidationError(f"Música {id_musica} não encontrada", "musicas")
             
-            novo_id = f"playlist{len(data_loader.playlists) + 1}"
-            nova_playlist = {
-                "id": novo_id,
-                "nome": input.nome,
-                "idUsuario": input.id_usuario,
-                "musicas": input.musicas
-            }
-            data_loader.playlists.append(nova_playlist)
+            import uuid
+            novo_id = str(uuid.uuid4())
             
-            return Playlist(**nova_playlist)
+            # Para demonstração: não modificar dados compartilhados
+            # Em produção: salvar no banco de dados
+            return Playlist(
+                id=novo_id,
+                nome=input.nome,
+                id_usuario=input.id_usuario,
+                musicas=input.musicas
+            )
         except ValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise Exception(f"Erro de validação: {e.message}")
 
     @strawberry.mutation
     def atualizar_usuario(self, id: str, input: UsuarioInput) -> Usuario:
-        """Updates an existing user with validation"""
+        """Atualiza um usuário existente."""
         try:
-            validate_nome(input.nome)
-            validate_idade(input.idade)
+            validar_nome(input.nome)
+            validar_idade(input.idade)
             
-            usuario = data_loader.get_usuario(id)
-            usuario.update({
-                "nome": input.nome,
-                "idade": input.idade
-            })
+            # Verificar se usuário existe
+            if hasattr(data_loader, 'obter_usuario_por_id'):
+                usuario = data_loader.obter_usuario_por_id(id)
+            else:
+                usuario = data_loader.obter_usuario(id)
             
-            return Usuario(**usuario)
+            if not usuario:
+                raise ValidationError("Usuário não encontrado", "id")
+            
+            # Para demonstração: retornar versão atualizada sem modificar dados originais
+            return Usuario(id=id, nome=input.nome, idade=input.idade)
+            
         except ValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise Exception(f"Erro de validação: {e.message}")
 
     @strawberry.mutation
     def atualizar_musica(self, id: str, input: MusicaInput) -> Musica:
-        """Updates an existing song with validation"""
+        """Atualiza uma música existente."""
         try:
-            validate_nome(input.nome, "nome")
-            validate_nome(input.artista, "artista")
-            validate_duracao(input.duracao_segundos)
+            validar_nome(input.nome, "nome")
+            validar_nome(input.artista, "artista")
+            validar_duracao(input.duracao_segundos)
             
-            musica = data_loader.get_musica(id)
-            musica.update({
-                "nome": input.nome,
-                "artista": input.artista,
-                "duracaoSegundos": input.duracao_segundos
-            })
+            # Verificar se música existe
+            if hasattr(data_loader, 'obter_musica_por_id'):
+                musica = data_loader.obter_musica_por_id(id)
+            else:
+                musica = data_loader.obter_musica(id)
             
-            return Musica(**musica)
+            if not musica:
+                raise ValidationError("Música não encontrada", "id")
+            
+            # Para demonstração: retornar versão atualizada sem modificar dados originais
+            return Musica(
+                id=id,
+                nome=input.nome,
+                artista=input.artista,
+                duracao_segundos=input.duracao_segundos
+            )
+            
         except ValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise Exception(f"Erro de validação: {e.message}")
 
     @strawberry.mutation
     def atualizar_playlist(self, id: str, input: PlaylistInput) -> Playlist:
-        """Updates an existing playlist with validation"""
+        """Atualiza uma playlist existente."""
         try:
-            validate_nome(input.nome)
+            validar_nome(input.nome)
             
-            # Validate user exists
-            data_loader.get_usuario(input.id_usuario)
+            # Verificar se playlist existe
+            if hasattr(data_loader, 'obter_playlist_por_id'):
+                playlist = data_loader.obter_playlist_por_id(id)
+            else:
+                playlist = data_loader.obter_playlist(id)
             
-            # Validate all music IDs exist
+            if not playlist:
+                raise ValidationError("Playlist não encontrada", "id")
+            
+            # Verificar se usuário existe
+            if hasattr(data_loader, 'obter_usuario_por_id'):
+                usuario = data_loader.obter_usuario_por_id(input.id_usuario)
+            else:
+                usuario = data_loader.obter_usuario(input.id_usuario)
+                
+            if not usuario:
+                raise ValidationError("Usuário não encontrado", "id_usuario")
+            
+            # Verificar se músicas existem
             for id_musica in input.musicas:
-                data_loader.get_musica(id_musica)
+                if hasattr(data_loader, 'obter_musica_por_id'):
+                    musica = data_loader.obter_musica_por_id(id_musica)
+                else:
+                    musica = data_loader.obter_musica(id_musica)
+                
+                if not musica:
+                    raise ValidationError(f"Música {id_musica} não encontrada", "musicas")
             
-            playlist = data_loader.get_playlist(id)
-            playlist.update({
-                "nome": input.nome,
-                "idUsuario": input.id_usuario,
-                "musicas": input.musicas
-            })
+            # Para demonstração: retornar versão atualizada sem modificar dados originais
+            return Playlist(
+                id=id,
+                nome=input.nome,
+                id_usuario=input.id_usuario,
+                musicas=input.musicas
+            )
             
-            return Playlist(**playlist)
         except ValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise Exception(f"Erro de validação: {e.message}")
 
     @strawberry.mutation
     def deletar_usuario(self, id: str) -> bool:
-        """Deletes a user and their playlists"""
+        """Remove um usuário do sistema."""
         try:
-            usuario = data_loader.get_usuario(id)
-            data_loader.usuarios.remove(usuario)
+            # Verificar se usuário existe
+            if hasattr(data_loader, 'obter_usuario_por_id'):
+                usuario = data_loader.obter_usuario_por_id(id)
+            else:
+                usuario = data_loader.obter_usuario(id)
             
-            # Remove user's playlists
-            data_loader.playlists = [
-                p for p in data_loader.playlists 
-                if p["idUsuario"] != id
-            ]
+            if not usuario:
+                raise ValidationError("Usuário não encontrado", "id")
             
+            # Para demonstração: simular remoção sem modificar dados originais
+            # Em produção: remover do banco de dados
             return True
+            
         except ValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise Exception(f"Erro de validação: {e.message}")
 
     @strawberry.mutation
     def deletar_musica(self, id: str) -> bool:
-        """Deletes a song and removes it from all playlists"""
+        """Remove uma música do sistema."""
         try:
-            musica = data_loader.get_musica(id)
-            data_loader.musicas.remove(musica)
+            # Verificar se música existe
+            if hasattr(data_loader, 'obter_musica_por_id'):
+                musica = data_loader.obter_musica_por_id(id)
+            else:
+                musica = data_loader.obter_musica(id)
             
-            # Remove song from all playlists
-            for playlist in data_loader.playlists:
-                if id in playlist["musicas"]:
-                    playlist["musicas"].remove(id)
+            if not musica:
+                raise ValidationError("Música não encontrada", "id")
             
+            # Para demonstração: simular remoção sem modificar dados originais
+            # Em produção: remover do banco de dados
             return True
+            
         except ValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise Exception(f"Erro de validação: {e.message}")
 
     @strawberry.mutation
     def deletar_playlist(self, id: str) -> bool:
-        """Deletes a playlist"""
+        """Remove uma playlist do sistema."""
         try:
-            playlist = data_loader.get_playlist(id)
-            data_loader.playlists.remove(playlist)
+            # Verificar se playlist existe
+            if hasattr(data_loader, 'obter_playlist_por_id'):
+                playlist = data_loader.obter_playlist_por_id(id)
+            else:
+                playlist = data_loader.obter_playlist(id)
+            
+            if not playlist:
+                raise ValidationError("Playlist não encontrada", "id")
+            
+            # Para demonstração: simular remoção sem modificar dados originais
+            # Em produção: remover do banco de dados
             return True
+            
         except ValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise Exception(f"Erro de validação: {e.message}")
 
 # ========== SCHEMA GRAPHQL ==========
 
@@ -516,12 +573,14 @@ schema = strawberry.Schema(query=Query, mutation=Mutation)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🚀 Servidor GraphQL iniciando...")
+    # Startup
+    print("Servidor GraphQL iniciando...")
     yield
-    print("🛑 Servidor GraphQL finalizando...")
+    # Shutdown
+    print("Servidor GraphQL finalizando...")
 
 app = FastAPI(
-    title="Serviço de Streaming - GraphQL API",
+    title="Serviço GraphQL - Plataforma de Streaming",
     description="API GraphQL para gerenciamento de usuários, músicas e playlists",
     version="1.0.0",
     lifespan=lifespan
@@ -537,13 +596,14 @@ app.add_middleware(
 )
 
 # Adicionar router GraphQL
-async def get_context():
+async def obter_contexto():
+    """Retorna o contexto GraphQL com DataLoaders."""
     return {"loaders": GraphQLDataLoaders(data_loader)}
 
 graphql_app = GraphQLRouter(
     schema,
     graphiql=True,
-    context_getter=get_context
+    context_getter=obter_contexto
 )
 app.include_router(graphql_app, prefix="/graphql")
 
@@ -551,193 +611,83 @@ app.include_router(graphql_app, prefix="/graphql")
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
-    """Página inicial com informações sobre a API GraphQL"""
+    """Página inicial com informações sobre a API GraphQL."""
     html_content = """
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Serviço de Streaming - GraphQL API</title>
+        <title>Serviço GraphQL - Plataforma de Streaming</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
-            .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
             h1 { color: #2c3e50; text-align: center; }
-            h2 { color: #34495e; border-bottom: 2px solid #8e44ad; padding-bottom: 10px; }
-            .query-example { background-color: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; overflow-x: auto; margin: 10px 0; }
-            .advantage { background-color: #e8f5e8; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #27ae60; }
+            h2 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+            .query { background-color: #ecf0f1; padding: 15px; margin: 10px 0; border-radius: 5px; font-family: monospace; }
             code { background-color: #34495e; color: white; padding: 2px 6px; border-radius: 3px; }
-            a { color: #8e44ad; text-decoration: none; font-weight: bold; }
+            a { color: #3498db; text-decoration: none; }
             a:hover { text-decoration: underline; }
-            .feature { margin: 15px 0; }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>🎵 Serviço de Streaming - GraphQL API</h1>
+            <h1>Serviço GraphQL - Plataforma de Streaming</h1>
 
-            <h2>📊 Status do Serviço</h2>
-            <p>✅ <strong>Servidor GraphQL ativo</strong></p>
-            <p>📈 Dados carregados: <strong>5 usuários</strong>, <strong>8 músicas</strong>, <strong>4 playlists</strong></p>
+            <h2>Playground GraphQL</h2>
+            <p>Acesse o <a href="/graphql">GraphQL Playground</a> para testar as consultas interativamente.</p>
 
-            <h2>🚀 Interface GraphiQL</h2>
-            <p>
-                <a href="/graphql" target="_blank">🔗 Abrir GraphiQL</a> - 
-                Interface interativa para testar queries GraphQL
-            </p>
+            <h2>Consultas de Exemplo</h2>
 
-            <h2>✨ Principais Vantagens do GraphQL</h2>
-
-            <div class="advantage">
-                <strong>🎯 Busca Precisa:</strong> Cliente solicita exatamente os dados que precisa, evitando over-fetching
+            <h3>Listar Usuários</h3>
+            <div class="query">
+                query {<br>
+                &nbsp;&nbsp;usuarios {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;id<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;nome<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;idade<br>
+                &nbsp;&nbsp;}<br>
+                }
             </div>
 
-            <div class="advantage">
-                <strong>🔗 Queries Relacionadas:</strong> Uma única query pode buscar dados de múltiplas entidades relacionadas
+            <h3>Listar Músicas</h3>
+            <div class="query">
+                query {<br>
+                &nbsp;&nbsp;musicas {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;id<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;nome<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;artista<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;duracao_segundos<br>
+                &nbsp;&nbsp;}<br>
+                }
             </div>
 
-            <div class="advantage">
-                <strong>📝 Schema Tipado:</strong> Definição clara de tipos e validação automática
+            <h3>Obter Estatísticas</h3>
+            <div class="query">
+                query {<br>
+                &nbsp;&nbsp;estatisticas {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;total_usuarios<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;total_musicas<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;total_playlists<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;media_musicas_por_playlist<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;tecnologia<br>
+                &nbsp;&nbsp;}<br>
+                }
             </div>
 
-            <div class="advantage">
-                <strong>🔍 Introspección:</strong> O schema é auto-documentado e explorável
+            <h2>Mutations de Exemplo</h2>
+
+            <h3>Criar Usuário</h3>
+            <div class="query">
+                mutation {<br>
+                &nbsp;&nbsp;criarUsuario(input: {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;nome: "João Silva"<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;idade: 30<br>
+                &nbsp;&nbsp;}) {<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;id<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;nome<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;idade<br>
+                &nbsp;&nbsp;}<br>
+                }
             </div>
-
-            <h2>🛠️ Exemplos de Queries</h2>
-
-            <h3>Query Básica - Listar Usuários</h3>
-            <div class="query-example">
-{
-  usuarios {
-    id
-    nome
-    idade
-  }
-}
-            </div>
-
-            <h3>Query Seletiva - Apenas Nomes</h3>
-            <div class="query-example">
-{
-  usuarios {
-    nome
-  }
-}
-            </div>
-
-            <h3>Query com Parâmetros - Playlists de um Usuário</h3>
-            <div class="query-example">
-{
-  playlistsUsuario(idUsuario: "user1") {
-    id
-    nome
-    musicas
-  }
-}
-            </div>
-
-            <h3>Query Complexa - Playlist com Dados Completos</h3>
-            <div class="query-example">
-{
-  playlistCompleta(idPlaylist: "playlist1") {
-    id
-    nome
-    usuario {
-      id
-      nome
-      idade
-    }
-    musicas {
-      id
-      nome
-      artista
-      duracaoSegundos
-    }
-  }
-}
-            </div>
-
-            <h3>Query de Estatísticas</h3>
-            <div class="query-example">
-{
-  estatisticas {
-    totalUsuarios
-    totalMusicas
-    totalPlaylists
-    mediaMusicasPorPlaylist
-    tecnologia
-  }
-}
-            </div>
-
-            <h3>Mutation - Criar Usuário</h3>
-            <div class="query-example">
-mutation {
-  criarUsuario(nome: "Novo Usuário", idade: 25) {
-    id
-    nome
-    idade
-  }
-}
-            </div>
-
-            <h2>🔧 Queries Disponíveis</h2>
-
-            <div class="feature">
-                <strong>usuarios:</strong> Lista todos os usuários
-            </div>
-
-            <div class="feature">
-                <strong>musicas:</strong> Lista todas as músicas
-            </div>
-
-            <div class="feature">
-                <strong>usuario(id: String!):</strong> Busca usuário específico
-            </div>
-
-            <div class="feature">
-                <strong>playlistsUsuario(idUsuario: String!):</strong> Playlists de um usuário
-            </div>
-
-            <div class="feature">
-                <strong>musicasPlaylist(idPlaylist: String!):</strong> Músicas de uma playlist
-            </div>
-
-            <div class="feature">
-                <strong>playlistsComMusica(idMusica: String!):</strong> Playlists que contêm uma música
-            </div>
-
-            <div class="feature">
-                <strong>playlistCompleta(idPlaylist: String!):</strong> Playlist com dados completos
-            </div>
-
-            <div class="feature">
-                <strong>estatisticas:</strong> Estatísticas gerais do serviço
-            </div>
-
-            <h2>🔧 Mutations Disponíveis</h2>
-
-            <div class="feature">
-                <strong>criarUsuario(nome: String!, idade: Int!):</strong> Cria novo usuário
-            </div>
-
-            <h2>💡 Como Testar</h2>
-            <ol>
-                <li>Clique no link <a href="/graphql" target="_blank">GraphiQL</a> acima</li>
-                <li>Cole uma das queries de exemplo</li>
-                <li>Clique no botão "Play" (▶️)</li>
-                <li>Veja o resultado na aba "Response"</li>
-                <li>Explore o schema na aba "Schema" ou "Docs"</li>
-            </ol>
-
-            <h2>🔧 Tecnologia</h2>
-            <p>Esta API foi construída com <strong>Strawberry GraphQL</strong> e demonstra os princípios <strong>GraphQL</strong>:</p>
-            <ul>
-                <li>📝 <strong>Single Endpoint:</strong> Todas as operações em /graphql</li>
-                <li>🎯 <strong>Cliente define a query:</strong> Flexibilidade total na busca</li>
-                <li>🔗 <strong>Resolvers:</strong> Funções que buscam dados para cada campo</li>
-                <li>📋 <strong>Schema tipado:</strong> Definição clara de tipos e operações</li>
-                <li>🔍 <strong>Introspección:</strong> Schema auto-documentado</li>
-            </ul>
         </div>
     </body>
     </html>
@@ -747,19 +697,9 @@ mutation {
 # ========== FUNÇÃO PARA EXECUTAR SERVIDOR ==========
 
 def executar_servidor():
-    """Executa o servidor GraphQL"""
+    """Executa o servidor GraphQL."""
     import uvicorn
-    print("🚀 Iniciando servidor GraphQL...")
-    print("📍 Acesse: http://localhost:8001")
-    print("🔍 GraphiQL: http://localhost:8001/graphql")
-
-    uvicorn.run(
-        "graphql_service:app",
-        host="0.0.0.0",
-        port=8001,
-        reload=True,
-        log_level="info"
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8001)
 
 if __name__ == "__main__":
     executar_servidor()

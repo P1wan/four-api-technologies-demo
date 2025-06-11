@@ -140,7 +140,7 @@ class StreamingService(streaming_pb2_grpc.StreamingServiceServicer):
         """Stream songs as they are requested."""
         try:
             for request in request_iterator:
-                musica = self.loader.obter_musica(request.id_musica)
+                musica = self.loader.obter_musica_por_id(request.id_musica)
                 if musica:
                     yield streaming_pb2.Musica(
                         id=musica['id'],

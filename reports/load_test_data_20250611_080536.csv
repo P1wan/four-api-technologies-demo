@@ -1,0 +1,17 @@
+Tecnologia,Operação,Usuarios_Concorrentes,Total_Requisições,Taxa_Sucesso_%,Tempo_Médio_ms,RPS,P50_ms,P95_ms,P99_ms
+REST,listar_usuarios,287,9316,100.0,5.46,575.8,2.0,5.98,8.0
+REST,listar_musicas,353,10612,100.0,3.2,706.7,2.46,6.47,8.31
+GraphQL,listar_usuarios,4,140,100.0,1050.64,9.2,931.87,3018.82,3433.95
+GraphQL,listar_musicas,2,84,100.0,1786.9,5.4,1849.77,2417.68,2956.32
+SOAP,listar_usuarios,221,6668,100.0,11.62,444.0,7.0,9.98,12.69
+SOAP,listar_musicas,240,7714,100.0,8.71,480.5,7.45,11.54,13.88
+gRPC,listar_usuarios,417,12529,99.86,6.49,834.7,6.47,9.21,9.73
+gRPC,listar_musicas,419,12608,99.9,6.47,838.8,6.48,9.18,9.69
+REST,listar_usuarios,283,9519,100.0,74.89,566.8,2.99,18.56,2078.67
+REST,listar_musicas,317,10664,100.0,65.83,634.1,3.52,18.24,2072.17
+GraphQL,listar_usuarios,4,165,100.0,5080.86,9.3,3487.26,17366.23,17808.76
+GraphQL,listar_musicas,2,114,100.0,7935.1,5.4,5606.98,19754.82,19834.64
+SOAP,listar_usuarios,221,7545,100.0,92.27,442.7,8.3,32.0,2103.64
+SOAP,listar_musicas,255,8705,100.0,79.33,510.2,8.46,30.47,2100.0
+gRPC,listar_usuarios,2131,64013,99.89,6.38,4262.4,6.39,9.07,9.49
+gRPC,listar_musicas,2140,64289,99.9,6.37,4280.5,6.37,9.06,9.48
