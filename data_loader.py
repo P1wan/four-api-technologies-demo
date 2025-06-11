@@ -60,11 +60,11 @@ class StreamingDataLoader:
             print(f"   - {len(self.playlists)} playlists")
 
         except FileNotFoundError as e:
-            print(f"❌ Erro: Arquivo não encontrado - {e}")
+            print(f"Erro: Arquivo não encontrado - {e}")
             print("Execute primeiro o script gerar_dados.py para criar os dados.")
             raise
         except json.JSONDecodeError as e:
-            print(f"❌ Erro ao decodificar JSON - {e}")
+            print(f"Erro ao decodificar JSON - {e}")
             raise
 
     def _criar_indices(self):
@@ -84,7 +84,7 @@ class StreamingDataLoader:
             for id_musica in playlist['musicas']:
                 self.playlists_por_musica[id_musica].append(playlist)
 
-        print(f"✅ Índices criados com sucesso")
+        print(f"Índices criados com sucesso")
 
     # ========== OPERAÇÕES DE CONSULTA PRINCIPAIS ==========
 

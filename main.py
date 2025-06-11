@@ -1,9 +1,15 @@
 """
-Script Principal - Trabalho de Computação Distribuída
-====================================================
+Script Principal Atualizado - Trabalho de Computação Distribuída
+===============================================================
 
 Executa todos os serviços (REST, GraphQL, SOAP/gRPC) simultaneamente
-para demonstração em ambiente web.
+e inclui sistema completo de testes de carga para demonstração.
+
+NOVA FUNCIONALIDADE: Sistema de Testes de Carga Integrado
+- Testes comparativos entre as 4 tecnologias
+- Métricas detalhadas (latência, RPS, percentis)
+- Relatórios automáticos em TXT e CSV
+- Interface interativa para demonstração
 
 Autor: Equipe de Computação Distribuída
 Data: 2025
@@ -23,6 +29,20 @@ import socketserver
 import webbrowser
 from pathlib import Path
 
+# ========== IMPORTAR SISTEMA DE TESTES DE CARGA ==========
+# (Assumindo que o código do sistema de testes está em load_testing.py)
+try:
+    from load_testing_system import (
+        LoadTestSuite, 
+        LoadTestEngine,
+        executar_sistema_testes_carga,
+        mostrar_ajuda_testes
+    )
+    LOAD_TESTING_AVAILABLE = True
+except ImportError:
+    LOAD_TESTING_AVAILABLE = False
+    print("⚠️ Sistema de testes de carga não encontrado. Funcionalidade limitada.")
+
 
 def verificar_dependencias():
     """Verifica e instala dependências necessárias"""
@@ -34,7 +54,9 @@ def verificar_dependencias():
         ("grpcio-tools", "grpcio-tools==1.59.0"),
         ("grpcio-reflection", "grpcio-reflection==1.59.0"),
         ("spyne", "spyne==2.14.0"),
-        ("lxml", "lxml==4.9.3")
+        ("lxml", "lxml==4.9.3"),
+        ("requests", "requests>=2.25.0"),  # Para testes de carga
+        ("aiohttp", "aiohttp>=3.8.0")  # Para testes async
     ]
 
     dependencias_faltando = []
@@ -66,7 +88,7 @@ def executar_servico_rest():
         app,
         host="0.0.0.0",
         port=8000,
-        log_level="error",  # Reduzir logs para demonstração
+        log_level="error",
         access_log=False)
 
 
@@ -140,6 +162,12 @@ def mostrar_banner():
 ├── 🟡 SOAP      → Spyne + WSDL
 └── 🟢 gRPC      → Demonstração com Protocol Buffers
 
+🧪 NOVO: SISTEMA DE TESTES DE CARGA INTEGRADO
+├── ⚡ Testes rápidos (2 minutos)
+├── 🔄 Testes completos (15 minutos)
+├── 📊 Métricas detalhadas (RPS, latência, percentis)
+└── 📈 Relatórios comparativos automáticos
+
 🌐 URLS DE ACESSO (aguarde inicialização):
 ┌─────────────┬──────────────────────────────────┬─────────────────┐
 │ Tecnologia  │ URL Principal                    │ Documentação    │
@@ -191,31 +219,274 @@ def mostrar_status_servicos():
     print("1. 🔵 REST: Teste os endpoints em /docs (Swagger UI)")
     print("2. 🟣 GraphQL: Execute queries em /graphql (GraphiQL)")
     print("3. 🟢 gRPC: Use a interface web em /grpc")
-    print("4. 📊 Compare performance e características de cada tecnologia")
+    print("4. 🧪 TESTES: Digite 'test' para abrir o sistema de testes de carga")
+    print("5. 📊 Compare performance e características de cada tecnologia")
 
     print("\n🎯 ROTEIRO SUGERIDO (15 min):")
     print("• 5 min: REST - Demonstrar endpoints e JSON responses")
     print("• 5 min: GraphQL - Mostrar queries flexíveis e precisas")
-    print("• 3 min: gRPC - Explicar streaming e performance")
-    print("• 2 min: Comparação final e conclusões")
+    print("• 3 min: Testes de Carga - Comparar performance das tecnologias")
+    print("• 2 min: Conclusões e análise final")
 
     print("\n" + "=" * 65)
 
 
-def aguardar_ctrl_c():
-    """Aguarda Ctrl+C para finalizar"""
-    try:
-        print("\n⌨️  Pressione Ctrl+C para parar todos os serviços...\n")
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\n🛑 Parando todos os serviços...")
+def mostrar_menu_interativo():
+    """Mostra menu interativo para controle durante demonstração"""
+    menu = """
+🎮 MENU INTERATIVO - DEMONSTRAÇÃO AO VIVO
+=======================================
+
+OPÇÕES DISPONÍVEIS:
+
+1. 🌐 Abrir Navegador
+   • REST API: http://localhost:8000/docs
+   • GraphQL: http://localhost:8001/graphql
+   • Interfaces Web: http://localhost:8080
+
+2. 🧪 Sistema de Testes de Carga
+   • Testes rápidos (2 min)
+   • Testes completos (15 min)
+   • Análise comparativa das 4 tecnologias
+
+3. 📊 Ver Status dos Serviços
+   • Verificar se todos estão funcionando
+   • URLs e portas utilizadas
+
+4. 🔧 Testes Manuais Rápidos
+   • Verificar conectividade das APIs
+   • Teste de smoke test automático
+
+5. 📈 Relatórios de Testes Anteriores
+   • Ver resultados de testes de carga
+   • Gráficos e métricas comparativas
+
+6. ❓ Ajuda e Documentação
+   • Como usar o sistema
+   • Explicação das tecnologias
+
+7. 🛑 Parar Serviços e Sair
+   • Finalizar demonstração
+
+Digite o número da opção (1-7) ou comando direto:
+• 'test' ou 'testes' → Testes de carga
+• 'open' ou 'abrir' → Abrir navegador
+• 'status' → Status dos serviços
+• 'help' ou 'ajuda' → Ajuda
+• 'quit' ou 'sair' → Finalizar
+
+Escolha: """
+    return menu
+
+
+def abrir_navegador_demonstracao():
+    """Abre navegador com as principais URLs para demonstração"""
+    urls = [
+        "http://localhost:8000/docs",  # REST Swagger
+        "http://localhost:8001/graphql",  # GraphQL
+        "http://localhost:8080"  # Interfaces Web
+    ]
+    
+    print("🌐 Abrindo navegador com URLs de demonstração...")
+    for url in urls:
+        try:
+            webbrowser.open(url)
+            time.sleep(1)  # Pausa entre aberturas
+        except Exception as e:
+            print(f"⚠️ Erro ao abrir {url}: {e}")
+    
+    print("✅ URLs abertas no navegador!")
+
+
+def executar_teste_smoke():
+    """Executa teste rápido de conectividade em todos os serviços"""
+    import requests
+    
+    print("🔥 Executando smoke test nos serviços...")
+    
+    testes = [
+        ("REST", "http://localhost:8000/usuarios", "GET"),
+        ("GraphQL", "http://localhost:8001/graphql", "POST"),
+        ("Web Server", "http://localhost:8080", "GET")
+    ]
+    
+    resultados = []
+    
+    for nome, url, metodo in testes:
+        try:
+            if metodo == "GET":
+                response = requests.get(url, timeout=5)
+            else:  # POST para GraphQL
+                response = requests.post(
+                    url, 
+                    json={"query": "{ usuarios { id nome } }"}, 
+                    timeout=5
+                )
+            
+            if response.status_code in [200, 201]:
+                resultados.append(f"✅ {nome}: OK ({response.status_code})")
+            else:
+                resultados.append(f"⚠️ {nome}: HTTP {response.status_code}")
+                
+        except Exception as e:
+            resultados.append(f"❌ {nome}: Erro - {str(e)[:50]}")
+    
+    print("\n📋 RESULTADOS DO SMOKE TEST:")
+    for resultado in resultados:
+        print(f"   {resultado}")
+    
+    # Verificar se todos passaram
+    todos_ok = all("✅" in r for r in resultados)
+    if todos_ok:
+        print("\n🎉 Todos os serviços estão funcionando corretamente!")
+    else:
+        print("\n⚠️ Alguns serviços podem estar com problemas.")
+    
+    return todos_ok
+
+
+def listar_relatorios_existentes():
+    """Lista relatórios de testes de carga existentes"""
+    reports_dir = Path("reports")
+    
+    if not reports_dir.exists():
+        print("📊 Nenhum relatório encontrado ainda.")
+        print("💡 Execute testes de carga para gerar relatórios.")
         return
+    
+    # Buscar relatórios
+    txt_reports = list(reports_dir.glob("load_test_report_*.txt"))
+    csv_reports = list(reports_dir.glob("load_test_data_*.csv"))
+    
+    if not txt_reports and not csv_reports:
+        print("📊 Nenhum relatório encontrado no diretório reports/")
+        return
+    
+    print(f"📊 RELATÓRIOS ENCONTRADOS:")
+    print("-" * 30)
+    
+    if txt_reports:
+        print("📄 Relatórios Texto:")
+        for report in sorted(txt_reports, reverse=True)[:5]:  # Últimos 5
+            timestamp = report.stem.split('_')[-2:]  # data_hora
+            print(f"   • {report.name} ({'_'.join(timestamp)})")
+    
+    if csv_reports:
+        print("\n📈 Dados CSV (para gráficos):")
+        for csv_file in sorted(csv_reports, reverse=True)[:3]:  # Últimos 3
+            timestamp = csv_file.stem.split('_')[-2:]
+            print(f"   • {csv_file.name} ({'_'.join(timestamp)})")
+    
+    print(f"\n💡 Abra os arquivos em {reports_dir.absolute()} para ver detalhes")
+    print("💡 Use os CSVs para criar gráficos no Excel/Google Sheets")
+
+
+def aguardar_comando_interativo():
+    """Aguarda comandos interativos durante demonstração"""
+    
+    print(mostrar_menu_interativo())
+    
+    while True:
+        try:
+            comando = input().strip().lower()
+            
+            if comando in ["1", "open", "abrir"]:
+                abrir_navegador_demonstracao()
+                
+            elif comando in ["2", "test", "testes"]:
+                if LOAD_TESTING_AVAILABLE:
+                    executar_sistema_testes_carga()
+                else:
+                    print("❌ Sistema de testes não disponível. Verifique se load_testing_system.py existe.")
+                
+            elif comando in ["3", "status"]:
+                mostrar_status_servicos()
+                
+            elif comando in ["4", "smoke"]:
+                executar_teste_smoke()
+                
+            elif comando in ["5", "relatorios", "reports"]:
+                listar_relatorios_existentes()
+                
+            elif comando in ["6", "help", "ajuda"]:
+                mostrar_ajuda_sistema()
+                
+            elif comando in ["7", "quit", "sair", "exit"]:
+                print("🛑 Finalizando demonstração...")
+                break
+                
+            else:
+                print("❌ Comando não reconhecido!")
+                print("💡 Digite um número (1-7) ou comando direto (test, open, status, etc.)")
+            
+            print("\n" + "="*50)
+            print("Digite outro comando ou 'sair' para finalizar:")
+            
+        except KeyboardInterrupt:
+            print("\n🛑 Finalizando demonstração...")
+            break
+        except Exception as e:
+            print(f"❌ Erro: {e}")
+
+
+def mostrar_ajuda_sistema():
+    """Mostra ajuda completa do sistema"""
+    ajuda = """
+📖 AJUDA - SISTEMA COMPLETO DE DEMONSTRAÇÃO
+==========================================
+
+🎯 OBJETIVO GERAL:
+Este sistema demonstra e compara 4 tecnologias de invocação de 
+serviços remotos através de implementações práticas e testes de carga.
+
+🔧 COMO USAR:
+
+1. DEMONSTRAÇÃO BÁSICA (5-10 min):
+   • Digite 'open' para abrir navegadores
+   • Acesse REST em /docs (Swagger UI)
+   • Teste GraphQL em /graphql (GraphiQL)
+   • Mostre diferenças de sintaxe e funcionalidades
+
+2. TESTES DE CARGA (2-15 min):
+   • Digite 'test' para sistema de testes
+   • Use "Teste Rápido" para demonstração (2 min)
+   • Use "Teste Completo" para análise detalhada (15 min)
+   • Compare métricas: latência, RPS, taxa sucesso
+
+3. ANÁLISE DE RESULTADOS:
+   • Digite 'relatorios' para ver testes anteriores
+   • Arquivos TXT: análise textual completa
+   • Arquivos CSV: dados para gráficos Excel/Sheets
+
+🧪 MÉTRICAS DOS TESTES:
+• Latência: Tempo de resposta (ms)
+• RPS: Requisições por segundo (throughput)
+• Taxa Sucesso: Confiabilidade (%)
+• Percentis: Consistência (P50, P95, P99)
+
+💡 DICAS PARA APRESENTAÇÃO:
+• Mantenha este terminal visível
+• Use 'status' para verificar serviços
+• Execute 'smoke' antes de demonstrar
+• Tenha gráficos prontos dos testes completos
+
+🔍 TROUBLESHOOTING:
+• Serviço não responde? Verifique 'status'
+• Teste falha? Execute 'smoke' primeiro
+• Performance baixa? Feche outros programas
+• Erro de porta? Reinicie o sistema
+
+⚠️ LIMITAÇÕES:
+• SOAP/gRPC são demonstrações conceituais
+• Testes são locais (não refletem rede real)
+• Dados em memória (performance otimizada)
+"""
+    print(ajuda)
 
 
 def executar_modo_desenvolvimento():
-    """Executa em modo desenvolvimento com threads"""
-    print("🔧 Modo: Desenvolvimento (threads)")
+    """Executa em modo desenvolvimento com threads + menu interativo"""
+    print("🔧 Modo: Desenvolvimento (threads + menu interativo)")
 
     # Criar threads para cada serviço
     threads = []
@@ -248,7 +519,7 @@ def executar_modo_desenvolvimento():
     for nome, thread in threads:
         print(f"🚀 Iniciando {nome}...")
         thread.start()
-        time.sleep(2)  # Aguardar um pouco entre inicializações
+        time.sleep(2)
 
     # Aguardar todos os serviços estarem prontos
     print("\n⏳ Aguardando inicialização completa...")
@@ -257,11 +528,18 @@ def executar_modo_desenvolvimento():
     # Mostrar status
     mostrar_status_servicos()
 
-    # Abrir navegador com a página principal
-    webbrowser.open('http://localhost:8080')
+    # Executar smoke test automático
+    print("\n🔥 Executando verificação automática...")
+    executar_teste_smoke()
 
-    # Aguardar finalização
-    aguardar_ctrl_c()
+    # Abrir navegador automaticamente
+    print("\n🌐 Abrindo navegador automaticamente...")
+    abrir_navegador_demonstracao()
+
+    # Entrar no modo interativo
+    print("\n🎮 SISTEMA PRONTO - MODO INTERATIVO ATIVO")
+    print("💡 Digite comandos para controlar a demonstração:")
+    aguardar_comando_interativo()
 
 
 def executar_modo_producao():
@@ -297,6 +575,15 @@ def executar_modo_producao():
             executor.shutdown(wait=False)
 
 
+def executar_modo_demonstracao():
+    """Modo específico para demonstração ao professor"""
+    print("🎓 Modo: Demonstração Acadêmica")
+    print("🎯 Otimizado para apresentação do trabalho")
+    
+    # Execução similar ao desenvolvimento, mas com foco na demonstração
+    executar_modo_desenvolvimento()
+
+
 def executar_modo_simples():
     """Executa apenas um serviço por vez (para debugging)"""
     servicos = [
@@ -304,7 +591,8 @@ def executar_modo_simples():
         ("GraphQL", executar_servico_graphql),
         ("gRPC", executar_servico_grpc),
         ("gRPC-Web", executar_servico_grpc_web),
-        ("Web", executar_servidor_web)
+        ("Web", executar_servidor_web),
+        ("Sistema de Testes", lambda: executar_sistema_testes_carga() if LOAD_TESTING_AVAILABLE else print("Testes não disponíveis"))
     ]
 
     print("🔧 Modo Simples: Escolha um serviço para executar")
@@ -312,7 +600,7 @@ def executar_modo_simples():
         print(f"{i}. {nome}")
 
     try:
-        escolha = int(input("\nEscolha (1-5): ")) - 1
+        escolha = int(input("\nEscolha (1-6): ")) - 1
         if 0 <= escolha < len(servicos):
             nome, funcao = servicos[escolha]
             print(f"🚀 Executando apenas {nome}...")
@@ -333,23 +621,25 @@ def main():
     if not verificar_dependencias():
         return
 
-    # Detectar ambiente
+    # Detectar ambiente e modo
     if len(sys.argv) > 1:
         modo = sys.argv[1].lower()
     else:
         # Modo padrão baseado no ambiente
         if "REPL_ID" in os.environ:  # Replit
-            modo = "replit"
+            modo = "demo"  # Modo demonstração para Replit
         elif "COLAB_GPU" in os.environ:  # Google Colab
             modo = "colab"
         else:
-            modo = "dev"
+            modo = "demo"  # Modo demonstração como padrão
 
     print(f"🔧 Ambiente detectado: {modo}")
 
     try:
-        if modo in ["dev", "desenvolvimento", "replit"]:
+        if modo in ["dev", "desenvolvimento"]:
             executar_modo_desenvolvimento()
+        elif modo in ["demo", "demonstracao", "replit"]:
+            executar_modo_demonstracao()
         elif modo in ["prod", "producao", "production"]:
             executar_modo_producao()
         elif modo in ["simples", "simple", "debug"]:
@@ -358,9 +648,16 @@ def main():
             # Para Google Colab, executar apenas REST
             print("📓 Google Colab detectado - executando apenas REST")
             executar_servico_rest()
+        elif modo in ["test", "testes"]:
+            # Modo apenas para testes de carga
+            if LOAD_TESTING_AVAILABLE:
+                print("🧪 Modo: Apenas Testes de Carga")
+                executar_sistema_testes_carga()
+            else:
+                print("❌ Sistema de testes não disponível!")
         else:
             print(f"❌ Modo '{modo}' não reconhecido!")
-            print("Modos disponíveis: dev, prod, simples, colab")
+            print("Modos disponíveis: demo, dev, prod, simples, test, colab")
 
     except Exception as e:
         print(f"❌ Erro durante execução: {e}")
@@ -370,155 +667,67 @@ def main():
         print("\n👋 Finalizando aplicação...")
 
 
-def verificar_portas():
-    """Verifica se as portas estão disponíveis"""
-    import socket
-
-    portas = [8000, 8001, 8002]
-    portas_ocupadas = []
-
-    for porta in portas:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(('localhost', porta)) == 0:
-                portas_ocupadas.append(porta)
-
-    if portas_ocupadas:
-        print(f"⚠️  Portas ocupadas: {portas_ocupadas}")
-        print("💡 Pare outros serviços ou use portas diferentes")
-        return False
-
-    return True
-
-
-def executar_testes_rapidos():
-    """Executa testes rápidos nos serviços"""
-    import requests
-    import time
-
-    print("🧪 Executando testes rápidos...")
-
-    servicos = [("REST", "http://localhost:8000/usuarios"),
-                ("GraphQL", "http://localhost:8001"),
-                ("SOAP+gRPC", "http://localhost:8002")]
-
-    for nome, url in servicos:
-        try:
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                print(f"✅ {nome}: OK")
-            else:
-                print(f"⚠️  {nome}: HTTP {response.status_code}")
-        except Exception as e:
-            print(f"❌ {nome}: Erro - {e}")
-
-
-def executar_com_ngrok():
-    """Executa com ngrok para URL pública (útil para demonstrações)"""
-    try:
-        from pyngrok import ngrok
-
-        print("🌐 Configurando URLs públicas com ngrok...")
-
-        # Executar serviços em background
-        thread_rest = Thread(target=executar_servico_rest, daemon=True)
-        thread_rest.start()
-        time.sleep(5)
-
-        # Criar túneis ngrok
-        public_url_rest = ngrok.connect(8000)
-
-        print(f"🔗 URL Pública REST: {public_url_rest}")
-        print(f"🔗 Documentação: {public_url_rest}/docs")
-
-        # Aguardar
-        aguardar_ctrl_c()
-
-    except ImportError:
-        print("❌ pyngrok não instalado. Instale com: pip install pyngrok")
-        print("💡 Executando normalmente...")
-        executar_modo_desenvolvimento()
-
-
-# ========== FUNÇÕES AUXILIARES PARA REPLIT ==========
-
-
-def configurar_replit():
-    """Configurações específicas para Replit"""
-
-    # Definir variáveis de ambiente
-    os.environ['PYTHONPATH'] = '.'
-
-    # Criar arquivo .replit se não existir
-    replit_config = """
-run = "python main.py"
-language = "python3"
-
-[nix]
-channel = "stable-21_11"
-
-[deps]
-fastapi = "*"
-uvicorn = "*"
-strawberry-graphql = "*"
-
-[[ports]]
-localPort = 8000
-externalPort = 80
-
-[[ports]]  
-localPort = 8001
-externalPort = 8001
-
-[[ports]]
-localPort = 8002  
-externalPort = 8002
-"""
-
-    if not os.path.exists('.replit'):
-        with open('.replit', 'w') as f:
-            f.write(replit_config)
-        print("✅ Arquivo .replit criado")
-
-
 def mostrar_ajuda():
     """Mostra ajuda sobre como usar o script"""
     help_text = """
-🆘 AJUDA - Como usar o script principal
+🆘 AJUDA - Sistema de Demonstração Completo
 
 EXECUÇÃO:
   python main.py [modo]
 
 MODOS DISPONÍVEIS:
-  dev         → Modo desenvolvimento (padrão, threads)
+  demo        → Modo demonstração (padrão, ideal para apresentação)
+  dev         → Modo desenvolvimento (threads)
   prod        → Modo produção (processos separados)  
   simples     → Executa um serviço por vez
+  test        → Apenas sistema de testes de carga
   colab       → Otimizado para Google Colab
-  ngrok       → Cria URLs públicas com ngrok
-  help        → Mostra esta ajuda
 
 EXEMPLOS:
-  python main.py              # Modo padrão (dev)
-  python main.py prod         # Modo produção
+  python main.py              # Modo demonstração (padrão)
+  python main.py demo         # Modo demonstração  
+  python main.py test         # Apenas testes de carga
   python main.py simples      # Escolher serviço individual
-  python main.py ngrok        # URLs públicas
+
+NOVIDADES - SISTEMA DE TESTES DE CARGA:
+  • Testes comparativos entre REST, GraphQL, SOAP, gRPC
+  • Métricas: latência, RPS, percentis, taxa de sucesso
+  • Relatórios automáticos em TXT e CSV
+  • Interface interativa para demonstração
+
+COMANDOS DURANTE EXECUÇÃO:
+  test/testes    → Abrir sistema de testes de carga
+  open/abrir     → Abrir navegador com URLs
+  status         → Ver status dos serviços
+  smoke          → Teste rápido de conectividade
+  relatorios     → Ver testes anteriores
+  help/ajuda     → Ajuda detalhada
+  sair/quit      → Finalizar
 
 PORTAS USADAS:
   8000 → REST API (FastAPI + Swagger)
   8001 → GraphQL (Strawberry + GraphiQL)  
-  8002 → Demonstrações SOAP/gRPC
+  8004 → SOAP (Spyne + WSDL)
+  50051 → gRPC (Protocol Buffers)
+  8003 → gRPC-Web (Proxy)
+  8080 → Servidor Web (Interfaces)
 
-RESOLUÇÃO DE PROBLEMAS:
-  • Porta ocupada? Pare outros serviços ou mude as portas
-  • Dependência faltando? O script instala automaticamente
-  • Erro de import? Verifique se os arquivos .py estão na pasta
-  • No Replit? Use o modo padrão (dev)
-
-DEMONSTRAÇÃO AO PROFESSOR:
+DEMONSTRAÇÃO RECOMENDADA (15 min):
   1. Execute: python main.py
-  2. Aguarde "TODOS OS SERVIÇOS ESTÃO RODANDO"
-  3. Acesse as URLs mostradas
-  4. Demonstre REST → GraphQL → SOAP/gRPC
-  5. Compare características e performance
+  2. Digite 'open' para abrir navegadores
+  3. Demonstre REST em /docs
+  4. Demonstre GraphQL em /graphql
+  5. Digite 'test' para testes de carga
+  6. Execute teste rápido (2 min)
+  7. Analise resultados comparativos
+  8. Conclusões sobre cada tecnologia
+
+PARA O TRABALHO ACADÊMICO:
+  • Use 'test' para gerar dados dos testes de carga
+  • Relatórios ficam em reports/ (TXT + CSV)
+  • CSV pode ser usado para gráficos Excel/Sheets
+  • Sistema atende requisitos de múltiplos clientes concorrentes
+  • Métricas incluem latência, RPS, percentis conforme especificado
 """
     print(help_text)
 
@@ -532,19 +741,14 @@ if __name__ == "__main__":
         if sys.argv[1] in ["help", "-h", "--help"]:
             mostrar_ajuda()
             sys.exit(0)
-        elif sys.argv[1] == "test":
-            executar_testes_rapidos()
-            sys.exit(0)
-        elif sys.argv[1] == "ngrok":
-            executar_com_ngrok()
+        elif sys.argv[1] == "smoke":
+            # Executar apenas smoke test
+            executar_teste_smoke()
             sys.exit(0)
 
     # Configurar ambiente Replit se detectado
     if "REPL_ID" in os.environ:
-        configurar_replit()
-
-    # Verificar portas disponíveis
-    # verificar_portas()  # Comentado para evitar problemas em alguns ambientes
+        os.environ['PYTHONPATH'] = '.'
 
     # Executar aplicação principal
     main()

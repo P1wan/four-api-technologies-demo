@@ -10,24 +10,24 @@
 
 ### 1.2 Serviços REST
 - [x] Implementar endpoints básicos
-- [ ] Completar operações CRUD para todas as entidades
-- [ ] Adicionar documentação Swagger/OpenAPI
-- [ ] Implementar tratamento de erros
-- [ ] Adicionar paginação para listagens
+- [x] Completar operações CRUD para todas as entidades
+- [x] Adicionar documentação Swagger/OpenAPI
+- [x] Implementar tratamento de erros
+- [x] Adicionar paginação para listagens
 
 ### 1.3 Serviços GraphQL
 - [x] Implementar schema básico
-- [ ] Completar todas as queries e mutations
-- [ ] Adicionar validações
-- [ ] Implementar tratamento de erros
-- [ ] Otimizar queries com DataLoader
+- [x] Completar todas as queries e mutations
+- [x] Adicionar validações
+- [x] Implementar tratamento de erros
+- [x] Otimizar queries com DataLoader
 
 ### 1.4 Serviços SOAP
 - [x] Definir WSDL
-- [ ] Implementar todas as operações
-- [ ] Adicionar validações
-- [ ] Implementar tratamento de erros
-- [ ] Documentar endpoints
+- [x] Implementar todas as operações
+- [x] Adicionar validações
+- [x] Implementar tratamento de erros
+- [x] Documentar endpoints
 
 ### 1.5 Serviços gRPC
 - [x] Definir proto files
