@@ -41,6 +41,49 @@ def test_list_playlists():
     assert response is not None
     assert isinstance(response, list)
 
+def test_listar_playlists_usuario():
+    """Test listing playlists for a specific user"""
+    client = get_soap_client()
+    usuarios = client.service.listar_usuarios()
+    user_id = usuarios[0].id
+    playlists = client.service.listar_playlists_usuario(user_id)
+    assert isinstance(playlists, list)
+    for playlist in playlists:
+        assert playlist.usuario == user_id
+
+def test_listar_musicas_playlist():
+    """Test listing songs for a playlist"""
+    client = get_soap_client()
+    playlists = client.service.listar_playlists()
+    playlist_id = playlists[0].id
+    musicas = client.service.listar_musicas_playlist(playlist_id)
+    assert isinstance(musicas, list)
+    for musica in musicas:
+        assert hasattr(musica, 'id')
+        assert hasattr(musica, 'nome')
+        assert hasattr(musica, 'artista')
+        assert hasattr(musica, 'duracao')
+
+def test_listar_playlists_com_musica():
+    """Test listing playlists containing a song"""
+    client = get_soap_client()
+    playlists = client.service.listar_playlists()
+    playlist_id = playlists[0].id
+    musicas = client.service.listar_musicas_playlist(playlist_id)
+    pytest.assume(len(musicas) > 0)
+    musica_id = musicas[0].id
+    playlists_with_song = client.service.listar_playlists_com_musica(musica_id)
+    assert isinstance(playlists_with_song, list)
+    assert any(p.id == playlist_id for p in playlists_with_song)
+
+def test_criar_musica():
+    """Test creating a new song"""
+    client = get_soap_client()
+    nova_musica = client.service.criar_musica('Teste Song', 'Tester', 180)
+    assert nova_musica.nome == 'Teste Song'
+    musicas = client.service.listar_musicas()
+    assert any(m.id == nova_musica.id for m in musicas)
+
 def test_create_and_get_user():
     """Test creating a new user and retrieving it"""
     client = get_soap_client()
@@ -107,4 +150,4 @@ if __name__ == "__main__":
     time.sleep(5)  # Give time to read the message
     
     # Run all tests
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])
