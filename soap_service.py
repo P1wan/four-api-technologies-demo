@@ -137,6 +137,25 @@ class StreamingService(ServiceBase):
         USUARIOS.append(novo)
         return Usuario(**novo)
 
+    @rpc(Unicode, Unicode, Integer, _returns=Musica)
+    def criar_musica(ctx, nome, artista, duracao):
+        """Cria uma nova música"""
+        novo_id = f"music{len(data_loader.musicas) + 1}"
+        nova = {
+            "id": novo_id,
+            "nome": nome,
+            "artista": artista,
+            "duracaoSegundos": duracao,
+        }
+        data_loader.musicas.append(nova)
+        MUSICAS.append({
+            "id": novo_id,
+            "nome": nome,
+            "artista": artista,
+            "duracao": duracao,
+        })
+        return Musica(id=novo_id, nome=nome, artista=artista, duracao=duracao)
+
     @rpc(Unicode, _returns=Usuario)
     def GetUser(ctx, id):
         """Obtém usuário por ID"""
@@ -226,6 +245,7 @@ def handle_cors(environ, start_response):
                 <li>listar_playlists()</li>
                 <li>buscar_usuario(user_id)</li>
                 <li>criar_usuario(id, nome, idade)</li>
+                <li>criar_musica(nome, artista, duracao)</li>
                 <li>GetUser(id)</li>
                 <li>criar_playlist(id, nome, id_usuario, musicas[])</li>
                 <li>GetPlaylist(id)</li>
