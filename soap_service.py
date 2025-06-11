@@ -37,15 +37,19 @@ MUSICAS = [
     }
     for m in data_loader.musicas
 ]
-PLAYLISTS = [
-    {
-        "id": p["id"],
-        "nome": p["nome"],
-        "usuario": p["idUsuario"],
-        "musicas": p["musicas"],
-    }
-    for p in data_loader.playlists
-]
+
+
+def get_playlists():
+    """Retorna playlists no formato usado pelo serviço SOAP"""
+    return [
+        {
+            "id": p["id"],
+            "nome": p["nome"],
+            "usuario": p["idUsuario"],
+            "musicas": p["musicas"],
+        }
+        for p in data_loader.playlists
+    ]
 
 # ========== MODELOS SOAP ==========
 class Usuario(ComplexModel):
@@ -91,20 +95,20 @@ class StreamingService(ServiceBase):
     def listar_playlists(ctx):
         """Lista playlists"""
         print("🟡 SOAP: listar_playlists chamado")
-        return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in PLAYLISTS]
+        return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in get_playlists()]
 
     @rpc(Unicode, _returns=Array(Playlist))
     def listar_playlists_usuario(ctx, id_usuario):
         """Lista playlists de um usuário"""
         print(f"🟡 SOAP: listar_playlists_usuario chamado para {id_usuario}")
-        playlists = [p for p in PLAYLISTS if p["usuario"] == id_usuario]
+        playlists = [p for p in get_playlists() if p["usuario"] == id_usuario]
         return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in playlists]
 
     @rpc(Unicode, _returns=Array(Musica))
     def listar_musicas_playlist(ctx, id_playlist):
         """Lista músicas de uma playlist"""
         print(f"🟡 SOAP: listar_musicas_playlist chamado para {id_playlist}")
-        playlist = next((p for p in PLAYLISTS if p["id"] == id_playlist), None)
+        playlist = next((p for p in get_playlists() if p["id"] == id_playlist), None)
         if not playlist:
             return []
         musicas = []
@@ -118,7 +122,7 @@ class StreamingService(ServiceBase):
     def listar_playlists_com_musica(ctx, id_musica):
         """Lista playlists que contêm uma música"""
         print(f"🟡 SOAP: listar_playlists_com_musica chamado para {id_musica}")
-        playlists = [p for p in PLAYLISTS if id_musica in p["musicas"]]
+        playlists = [p for p in get_playlists() if id_musica in p["musicas"]]
         return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in playlists]
     
     @rpc(Unicode, _returns=Usuario)
@@ -167,14 +171,18 @@ class StreamingService(ServiceBase):
     @rpc(Unicode, Unicode, Unicode, Array(Unicode), _returns=Playlist)
     def criar_playlist(ctx, id, nome, id_usuario, musicas):
         """Cria uma nova playlist"""
-        nova = {"id": id, "nome": nome, "usuario": id_usuario, "musicas": list(musicas)}
-        PLAYLISTS.append(nova)
+        data_loader.playlists.append({
+            "id": id,
+            "nome": nome,
+            "idUsuario": id_usuario,
+            "musicas": list(musicas),
+        })
         return Playlist(id=id, nome=nome, usuario=id_usuario)
 
     @rpc(Unicode, _returns=Playlist)
     def GetPlaylist(ctx, id):
         """Obtém playlist por ID"""
-        for p in PLAYLISTS:
+        for p in get_playlists():
             if p["id"] == id:
                 return Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"])
         return Playlist(id="", nome="", usuario="")
@@ -182,12 +190,12 @@ class StreamingService(ServiceBase):
     @rpc(_returns=Estatisticas)
     def obter_estatisticas(ctx):
         """Retorna estatísticas do serviço"""
-        total_playlists = len(PLAYLISTS)
+        total_playlists = len(data_loader.playlists)
         total_musicas = len(MUSICAS)
         total_usuarios = len(USUARIOS)
         media = 0.0
         if total_playlists:
-            media = sum(len(p.get("musicas", [])) for p in PLAYLISTS) / total_playlists
+            media = sum(len(p.get("musicas", [])) for p in get_playlists()) / total_playlists
         return Estatisticas(
             total_usuarios=total_usuarios,
             total_musicas=total_musicas,

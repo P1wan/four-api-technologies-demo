@@ -9,7 +9,7 @@
 // URLs padrão dos serviços
 const REST_URL = 'http://localhost:8000';
 const GRAPHQL_URL = 'http://localhost:8001/graphql';
-const SOAP_URL = 'http://localhost:8002/soap';
+const SOAP_URL = 'http://localhost:8004/soap';
 const GRPC_URL = 'http://localhost:50051'; // gRPC usa porta separada
 
 // -------------------- REST --------------------
