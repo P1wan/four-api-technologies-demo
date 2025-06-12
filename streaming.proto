@@ -12,6 +12,24 @@ service StreamingService {
   rpc ListarPlaylistsComMusica(MusicaRequest) returns (PlaylistsResponse);
   rpc ObterEstatisticas(Empty) returns (EstatisticasResponse);
   
+  // CRUD operations for Users
+  rpc ObterUsuario(UsuarioRequest) returns (Usuario);
+  rpc CriarUsuario(CriarUsuarioRequest) returns (Usuario);
+  rpc AtualizarUsuario(AtualizarUsuarioRequest) returns (Usuario);
+  rpc DeletarUsuario(UsuarioRequest) returns (BooleanResponse);
+  
+  // CRUD operations for Music
+  rpc ObterMusica(MusicaRequest) returns (Musica);
+  rpc CriarMusica(CriarMusicaRequest) returns (Musica);
+  rpc AtualizarMusica(AtualizarMusicaRequest) returns (Musica);
+  rpc DeletarMusica(MusicaRequest) returns (BooleanResponse);
+  
+  // CRUD operations for Playlists
+  rpc ObterPlaylist(PlaylistRequest) returns (Playlist);
+  rpc CriarPlaylist(CriarPlaylistRequest) returns (Playlist);
+  rpc AtualizarPlaylist(AtualizarPlaylistRequest) returns (Playlist);
+  rpc DeletarPlaylist(PlaylistRequest) returns (BooleanResponse);
+  
   // Streaming operation
   rpc StreamMusicas(stream MusicaRequest) returns (stream Musica);
 }
@@ -30,6 +48,49 @@ message PlaylistRequest {
 
 message MusicaRequest {
   string id_musica = 1;
+}
+
+// CRUD request messages
+message CriarUsuarioRequest {
+  string nome = 1;
+  int32 idade = 2;
+}
+
+message AtualizarUsuarioRequest {
+  string id_usuario = 1;
+  string nome = 2;
+  int32 idade = 3;
+}
+
+message CriarMusicaRequest {
+  string nome = 1;
+  string artista = 2;
+  int32 duracao_segundos = 3;
+}
+
+message AtualizarMusicaRequest {
+  string id_musica = 1;
+  string nome = 2;
+  string artista = 3;
+  int32 duracao_segundos = 4;
+}
+
+message CriarPlaylistRequest {
+  string nome = 1;
+  string id_usuario = 2;
+  repeated string musicas = 3;
+}
+
+message AtualizarPlaylistRequest {
+  string id_playlist = 1;
+  string nome = 2;
+  repeated string musicas = 3;
+}
+
+// Boolean response for delete operations
+message BooleanResponse {
+  bool success = 1;
+  string message = 2;
 }
 
 // Response messages

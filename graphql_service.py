@@ -399,12 +399,11 @@ class Mutation:
             return Usuario(id=id, nome=input.nome, idade=input.idade)
             
         except ValidationError as e:
-            raise Exception(f"Erro de validação: {e.message}")
-
-    @strawberry.mutation
+            raise Exception(f"Erro de validação: {e.message}")    @strawberry.mutation
     def atualizar_musica(self, id: str, input: MusicaInput) -> Musica:
         """Atualiza uma música existente."""
-        try:            validar_nome(input.nome, "nome")
+        try:
+            validar_nome(input.nome, "nome")
             validar_nome(input.artista, "artista")
             validar_duracao(input.duracao_segundos)
             

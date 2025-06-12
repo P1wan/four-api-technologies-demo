@@ -14,6 +14,7 @@ from spyne import (
     Unicode,
     Integer,
     Float,
+    Boolean,
     ComplexModel,
     Array,
     Iterable,
@@ -199,9 +200,104 @@ class StreamingService(ServiceBase):
             total_playlists=total_playlists,
             media_musicas_por_playlist=media_musicas_por_playlist,
             tecnologia="SOAP",
-            framework="Spyne",
+            framework="Spyne"
         )
 
+    # ========== UPDATE AND DELETE OPERATIONS ==========
+
+    @rpc(Unicode, Unicode, Integer, _returns=Usuario)
+    def atualizar_usuario(ctx, id_usuario, nome, idade):
+        """Atualiza um usuário existente."""
+        # Verificar se usuário existe
+        usuario = next((u for u in USUARIOS if u["id"] == id_usuario), None)
+        if not usuario:
+            # Para demonstração, retornar usuário vazio se não encontrado
+            return Usuario(id="", nome="", idade=0)
+        
+        # Validações
+        if not nome or len(nome.strip()) == 0:
+            return Usuario(id="", nome="", idade=0)  # Erro de validação
+        
+        if idade < 0 or idade > 150:
+            return Usuario(id="", nome="", idade=0)  # Erro de validação
+        
+        # Para demonstração: retornar versão atualizada sem modificar dados originais
+        return Usuario(id=id_usuario, nome=nome.strip(), idade=idade)
+
+    @rpc(Unicode, _returns=Boolean)
+    def deletar_usuario(ctx, id_usuario):
+        """Remove um usuário do sistema."""
+        # Verificar se usuário existe
+        usuario = next((u for u in USUARIOS if u["id"] == id_usuario), None)
+        if not usuario:
+            return False
+        
+        # Para demonstração: simular remoção sem modificar dados originais
+        return True
+
+    @rpc(Unicode, Unicode, Unicode, Integer, _returns=Musica)
+    def atualizar_musica(ctx, id_musica, nome, artista, duracao):
+        """Atualiza uma música existente."""
+        # Verificar se música existe
+        musica = next((m for m in MUSICAS if m["id"] == id_musica), None)
+        if not musica:
+            return Musica(id="", nome="", artista="", duracao=0)
+        
+        # Validações
+        if not nome or len(nome.strip()) == 0:
+            return Musica(id="", nome="", artista="", duracao=0)
+        
+        if not artista or len(artista.strip()) == 0:
+            return Musica(id="", nome="", artista="", duracao=0)
+        
+        if duracao <= 0:
+            return Musica(id="", nome="", artista="", duracao=0)
+        
+        # Para demonstração: retornar versão atualizada sem modificar dados originais
+        return Musica(id=id_musica, nome=nome.strip(), artista=artista.strip(), duracao=duracao)
+
+    @rpc(Unicode, _returns=Boolean)
+    def deletar_musica(ctx, id_musica):
+        """Remove uma música do sistema."""
+        # Verificar se música existe
+        musica = next((m for m in MUSICAS if m["id"] == id_musica), None)
+        if not musica:
+            return False
+        
+        # Para demonstração: simular remoção sem modificar dados originais
+        return True
+
+    @rpc(Unicode, Unicode, Array(Unicode), _returns=Playlist)
+    def atualizar_playlist(ctx, id_playlist, nome, musicas):
+        """Atualiza uma playlist existente."""
+        # Verificar se playlist existe
+        playlist = next((p for p in obter_playlists_locais() if p["id"] == id_playlist), None)
+        if not playlist:
+            return Playlist(id="", nome="", usuario="")
+        
+        # Validações
+        if not nome or len(nome.strip()) == 0:
+            return Playlist(id="", nome="", usuario="")
+        
+        # Verificar se todas as músicas existem
+        for id_musica in musicas:
+            musica = next((m for m in MUSICAS if m["id"] == id_musica), None)
+            if not musica:
+                return Playlist(id="", nome="", usuario="")  # Música não encontrada
+        
+        # Para demonstração: retornar versão atualizada sem modificar dados originais
+        return Playlist(id=id_playlist, nome=nome.strip(), usuario=playlist["usuario"])
+
+    @rpc(Unicode, _returns=Boolean)
+    def deletar_playlist(ctx, id_playlist):
+        """Remove uma playlist do sistema."""
+        # Verificar se playlist existe
+        playlist = next((p for p in obter_playlists_locais() if p["id"] == id_playlist), None)
+        if not playlist:
+            return False
+        
+        # Para demonstração: simular remoção sem modificar dados originais
+        return True
 def criar_aplicacao_soap():
     """Cria a aplicação SOAP."""
     application = Application(
@@ -259,9 +355,9 @@ def manipular_cors_e_roteamento(environ, start_response):
         </head>
         <body>
             <h1>Serviço SOAP - Plataforma de Streaming</h1>
-            <p>Este é o serviço SOAP da plataforma de streaming.</p>
-            <h2>Operações Disponíveis:</h2>
+            <p>Este é o serviço SOAP da plataforma de streaming.</p>            <h2>Operações Disponíveis:</h2>
             <ul>
+                <li><strong>Consultas:</strong></li>
                 <li>listar_usuarios</li>
                 <li>listar_musicas</li>
                 <li>listar_playlists</li>
@@ -269,11 +365,18 @@ def manipular_cors_e_roteamento(environ, start_response):
                 <li>listar_musicas_playlist</li>
                 <li>listar_playlists_com_musica</li>
                 <li>obter_usuario</li>
-                <li>criar_usuario</li>
-                <li>criar_musica</li>
-                <li>criar_playlist</li>
                 <li>obter_playlist</li>
                 <li>obter_estatisticas</li>
+                <li><strong>Operações CRUD:</strong></li>
+                <li>criar_usuario</li>
+                <li>atualizar_usuario</li>
+                <li>deletar_usuario</li>
+                <li>criar_musica</li>
+                <li>atualizar_musica</li>
+                <li>deletar_musica</li>
+                <li>criar_playlist</li>
+                <li>atualizar_playlist</li>
+                <li>deletar_playlist</li>
             </ul>
             <p>Para ver o WSDL, acesse: <a href="?wsdl">?wsdl</a></p>
         </body>
