@@ -20,7 +20,7 @@ import os
 from contextlib import asynccontextmanager
 
 # Importa o carregador real de dados gerados em ``data/``
-from data_loader import get_data_loader
+from dataloaders import get_data_loader
 
 # ---------------------------------------------------------------------------
 # Observação sobre o antigo ``SimpleDataLoader``
@@ -350,8 +350,8 @@ async def listar_playlists_usuario(id_usuario: str):
     usuario_existe = any(u["id"] == id_usuario for u in data_loader.usuarios)
     if not usuario_existe:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
-
-    playlists_usuario = [p for p in data_loader.playlists if p["idUsuario"] == id_usuario]
+    
+    playlists_usuario = data_loader.listar_playlists_usuario(id_usuario)
     return playlists_usuario
 
 @app.get("/playlists/{id_playlist}/musicas", response_model=List[Dict], tags=["playlists"])
@@ -360,19 +360,13 @@ async def listar_musicas_playlist(id_playlist: str):
     Lista todas as músicas de uma playlist específica.
 
     **Princípio REST**: Recurso aninhado /playlists/{id}/musicas
-    """
-    # Encontrar a playlist
-    playlist = next((p for p in data_loader.playlists if p["id"] == id_playlist), None)
+    """    # Encontrar a playlist
+    playlist = data_loader.get_playlist(id_playlist)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist não encontrada")
 
     # Buscar as músicas da playlist
-    musicas_da_playlist = []
-    for id_musica in playlist["musicas"]:
-        musica = next((m for m in data_loader.musicas if m["id"] == id_musica), None)
-        if musica:
-            musicas_da_playlist.append(musica)
-
+    musicas_da_playlist = data_loader.listar_musicas_playlist(id_playlist)
     return musicas_da_playlist
 
 @app.get("/musicas/{id_musica}/playlists", response_model=List[Dict], tags=["musicas"])
@@ -381,13 +375,12 @@ async def listar_playlists_com_musica(id_musica: str):
     Lista todas as playlists que contêm uma música específica.
 
     **Princípio REST**: Recurso aninhado /musicas/{id}/playlists
-    """
-    # Verificar se música existe
+    """    # Verificar se música existe
     musica_existe = any(m["id"] == id_musica for m in data_loader.musicas)
     if not musica_existe:
         raise HTTPException(status_code=404, detail="Música não encontrada")
 
-    playlists_com_musica = [p for p in data_loader.playlists if id_musica in p["musicas"]]
+    playlists_com_musica = data_loader.listar_playlists_com_musica(id_musica)
     return playlists_com_musica
 
 @app.get("/stats", tags=["estatisticas"])
@@ -444,7 +437,7 @@ async def obter_usuario(id_usuario: str):
 # ========== CRUD OPERATIONS FOR MUSICS ==========
 
 @app.post("/musicas", response_model=Dict, tags=["musicas"])
-async def criar_musica(nome: str, artista: str, duracaoSegundos: int):
+async def criar_musica(nome: str, artista: str, duracao_segundos: int):
     """
     Cria uma nova música.
 
@@ -456,7 +449,7 @@ async def criar_musica(nome: str, artista: str, duracaoSegundos: int):
         "id": str(uuid.uuid4()),
         "nome": nome,
         "artista": artista,
-        "duracaoSegundos": duracaoSegundos
+        "duracaoSegundos": duracao_segundos
     }
     
     # Para demonstração: simular criação sem modificar dados compartilhados
@@ -470,20 +463,20 @@ async def obter_musica(id_musica: str):
 
     **Princípio REST**: GET em recurso específico
     """
-    musica = data_loader.obter_musica_por_id(id_musica)
+    musica = data_loader.get_musica(id_musica)
     if not musica:
         raise HTTPException(status_code=404, detail="Música não encontrada")
     return musica
 
 @app.put("/musicas/{id_musica}", response_model=Dict, tags=["musicas"])
-async def atualizar_musica(id_musica: str, nome: str = None, artista: str = None, duracaoSegundos: int = None):
+async def atualizar_musica(id_musica: str, nome: str = None, artista: str = None, duracao_segundos: int = None):
     """
     Atualiza uma música existente.
 
     **Princípio REST**: PUT para atualizar recursos
     **Nota**: Para demonstração - em produção seria persistido em banco de dados
     """
-    musica = data_loader.obter_musica_por_id(id_musica)
+    musica = data_loader.get_musica(id_musica)
     if not musica:
         raise HTTPException(status_code=404, detail="Música não encontrada")
     
@@ -493,8 +486,8 @@ async def atualizar_musica(id_musica: str, nome: str = None, artista: str = None
         musica_atualizada["nome"] = nome
     if artista:
         musica_atualizada["artista"] = artista
-    if duracaoSegundos:
-        musica_atualizada["duracaoSegundos"] = duracaoSegundos
+    if duracao_segundos:
+        musica_atualizada["duracaoSegundos"] = duracao_segundos
     
     return musica_atualizada
 
@@ -506,7 +499,7 @@ async def deletar_musica(id_musica: str):
     **Princípio REST**: DELETE para remover recursos
     **Nota**: Para demonstração - em produção seria removido do banco de dados
     """
-    musica = data_loader.obter_musica_por_id(id_musica)
+    musica = data_loader.get_musica(id_musica)
     if not musica:
         raise HTTPException(status_code=404, detail="Música não encontrada")
     
@@ -516,7 +509,7 @@ async def deletar_musica(id_musica: str):
 # ========== CRUD OPERATIONS FOR PLAYLISTS ==========
 
 @app.post("/playlists", response_model=Dict, tags=["playlists"])
-async def criar_playlist(nome: str, idUsuario: str, musicas: List[str] = None):
+async def criar_playlist(nome: str, id_usuario: str, musicas: List[str] = None):
     """
     Cria uma nova playlist.
 
@@ -524,14 +517,14 @@ async def criar_playlist(nome: str, idUsuario: str, musicas: List[str] = None):
     **Nota**: Para demonstração - em produção seria persistido em banco de dados
     """
     # Verificar se usuário existe
-    usuario = data_loader.obter_usuario_por_id(idUsuario)
+    usuario = data_loader.get_usuario(id_usuario)
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
     # Verificar se todas as músicas existem
     if musicas:
         for id_musica in musicas:
-            musica = data_loader.obter_musica_por_id(id_musica)
+            musica = data_loader.get_musica(id_musica)
             if not musica:
                 raise HTTPException(status_code=404, detail=f"Música {id_musica} não encontrada")
     
@@ -539,7 +532,7 @@ async def criar_playlist(nome: str, idUsuario: str, musicas: List[str] = None):
     nova_playlist = {
         "id": str(uuid.uuid4()),
         "nome": nome,
-        "idUsuario": idUsuario,
+        "idUsuario": id_usuario,
         "musicas": musicas or []
     }
     
@@ -553,7 +546,7 @@ async def obter_playlist(id_playlist: str):
 
     **Princípio REST**: GET em recurso específico
     """
-    playlist = data_loader.obter_playlist_por_id(id_playlist)
+    playlist = data_loader.get_playlist(id_playlist)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist não encontrada")
     return playlist
@@ -566,7 +559,7 @@ async def atualizar_playlist(id_playlist: str, nome: str = None, musicas: List[s
     **Princípio REST**: PUT para atualizar recursos
     **Nota**: Para demonstração - em produção seria persistido em banco de dados
     """
-    playlist = data_loader.obter_playlist_por_id(id_playlist)
+    playlist = data_loader.get_playlist(id_playlist)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist não encontrada")
     
@@ -577,7 +570,7 @@ async def atualizar_playlist(id_playlist: str, nome: str = None, musicas: List[s
     if musicas is not None:
         # Verificar se todas as músicas existem
         for id_musica in musicas:
-            musica = data_loader.obter_musica_por_id(id_musica)
+            musica = data_loader.get_musica(id_musica)
             if not musica:
                 raise HTTPException(status_code=404, detail=f"Música {id_musica} não encontrada")
         playlist_atualizada["musicas"] = musicas
@@ -592,7 +585,7 @@ async def deletar_playlist(id_playlist: str):
     **Princípio REST**: DELETE para remover recursos
     **Nota**: Para demonstração - em produção seria removido do banco de dados
     """
-    playlist = data_loader.obter_playlist_por_id(id_playlist)
+    playlist = data_loader.get_playlist(id_playlist)
     if not playlist:
         raise HTTPException(status_code=404, detail="Playlist não encontrada")
     

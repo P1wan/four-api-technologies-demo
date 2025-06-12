@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 # Data loader usado por todos os backends
-from data_loader import get_data_loader
+from dataloaders import get_data_loader
 from dataloaders import GraphQLDataLoaders
 
 # Tipos GraphQL padronizados
@@ -195,17 +195,11 @@ class Query:
                 duracao_segundos=m["duracaoSegundos"]
             )
             for m in musicas
-        ]
-
-    @strawberry.field
+        ]    @strawberry.field
     async def usuario(self, info, id: str) -> Optional[Usuario]:
         """Obtém um usuário por ID."""
         try:
-            if hasattr(info.context["loaders"].data_loader, 'obter_usuario_por_id'):
-                usuario = info.context["loaders"].data_loader.obter_usuario_por_id(id)
-            else:
-                usuario = info.context["loaders"].data_loader.obter_usuario(id)
-            
+            usuario = info.context["loaders"].data_loader.get_usuario(id)
             if usuario:
                 return Usuario(id=usuario["id"], nome=usuario["nome"], idade=usuario["idade"])
             return None
@@ -261,26 +255,17 @@ class Query:
                 for p in playlists
             ]
         except Exception:
-            return []
-
-    @strawberry.field
+            return []    @strawberry.field
     async def playlist_completa(self, info, id_playlist: str) -> Optional[PlaylistCompleta]:
         """Obtém playlist com dados completos."""
         try:
             # Obter playlist
-            if hasattr(info.context["loaders"].data_loader, 'obter_playlist_por_id'):
-                playlist = info.context["loaders"].data_loader.obter_playlist_por_id(id_playlist)
-            else:
-                playlist = info.context["loaders"].data_loader.obter_playlist(id_playlist)
-            
+            playlist = info.context["loaders"].data_loader.get_playlist(id_playlist)
             if not playlist:
                 return None
 
             # Obter usuário
-            if hasattr(info.context["loaders"].data_loader, 'obter_usuario_por_id'):
-                usuario_data = info.context["loaders"].data_loader.obter_usuario_por_id(playlist["idUsuario"])
-            else:
-                usuario_data = info.context["loaders"].data_loader.obter_usuario(playlist["idUsuario"])
+            usuario_data = info.context["loaders"].data_loader.get_usuario(playlist["idUsuario"])
 
             # Obter músicas
             musicas = info.context["loaders"].data_loader.listar_musicas_playlist(id_playlist)
@@ -369,30 +354,20 @@ class Mutation:
                 duracao_segundos=input.duracao_segundos
             )
         except ValidationError as e:
-            raise Exception(f"Erro de validação: {e.message}")
-
-    @strawberry.mutation
+            raise Exception(f"Erro de validação: {e.message}")    @strawberry.mutation
     def criar_playlist(self, input: PlaylistInput) -> Playlist:
         """Cria uma nova playlist."""
         try:
             validar_nome(input.nome)
             
             # Verificar se usuário existe
-            if hasattr(data_loader, 'obter_usuario_por_id'):
-                usuario = data_loader.obter_usuario_por_id(input.id_usuario)
-            else:
-                usuario = data_loader.obter_usuario(input.id_usuario)
-            
+            usuario = data_loader.get_usuario(input.id_usuario)
             if not usuario:
                 raise ValidationError("Usuário não encontrado", "id_usuario")
             
             # Verificar se músicas existem
             for id_musica in input.musicas:
-                if hasattr(data_loader, 'obter_musica_por_id'):
-                    musica = data_loader.obter_musica_por_id(id_musica)
-                else:
-                    musica = data_loader.obter_musica(id_musica)
-                
+                musica = data_loader.get_musica(id_musica)
                 if not musica:
                     raise ValidationError(f"Música {id_musica} não encontrada", "musicas")
             
@@ -408,9 +383,7 @@ class Mutation:
                 musicas=input.musicas
             )
         except ValidationError as e:
-            raise Exception(f"Erro de validação: {e.message}")
-
-    @strawberry.mutation
+            raise Exception(f"Erro de validação: {e.message}")    @strawberry.mutation
     def atualizar_usuario(self, id: str, input: UsuarioInput) -> Usuario:
         """Atualiza um usuário existente."""
         try:
@@ -418,11 +391,7 @@ class Mutation:
             validar_idade(input.idade)
             
             # Verificar se usuário existe
-            if hasattr(data_loader, 'obter_usuario_por_id'):
-                usuario = data_loader.obter_usuario_por_id(id)
-            else:
-                usuario = data_loader.obter_usuario(id)
-            
+            usuario = data_loader.get_usuario(id)
             if not usuario:
                 raise ValidationError("Usuário não encontrado", "id")
             
@@ -435,17 +404,12 @@ class Mutation:
     @strawberry.mutation
     def atualizar_musica(self, id: str, input: MusicaInput) -> Musica:
         """Atualiza uma música existente."""
-        try:
-            validar_nome(input.nome, "nome")
+        try:            validar_nome(input.nome, "nome")
             validar_nome(input.artista, "artista")
             validar_duracao(input.duracao_segundos)
             
             # Verificar se música existe
-            if hasattr(data_loader, 'obter_musica_por_id'):
-                musica = data_loader.obter_musica_por_id(id)
-            else:
-                musica = data_loader.obter_musica(id)
-            
+            musica = data_loader.get_musica(id)
             if not musica:
                 raise ValidationError("Música não encontrada", "id")
             

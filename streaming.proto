@@ -71,4 +71,4 @@ message EstatisticasResponse {
   int32 total_playlists = 3;
   float media_musicas_por_playlist = 4;
   string tecnologia = 5;
-} 
+}

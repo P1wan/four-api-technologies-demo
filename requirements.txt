@@ -9,3 +9,5 @@ lxml
 grpcio
 grpcio-tools
 zeep
+grpcio-reflection
+protobuf

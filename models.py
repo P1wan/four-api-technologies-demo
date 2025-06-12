@@ -48,4 +48,4 @@ class StreamingService:
         return next((m for m in self.musicas if m.id == id), None)
 
     def get_playlist(self, id: str) -> Optional[Playlist]:
-        return next((p for p in self.playlists if p.id == id), None) 
+        return next((p for p in self.playlists if p.id == id), None)

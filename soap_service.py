@@ -27,7 +27,7 @@ from typing import List, Dict, Optional
 import traceback
 
 # Usar dados reais gerados em data/
-from data_loader import get_data_loader
+from dataloaders import get_data_loader
 
 # Carrega dados uma única vez
 data_loader = get_data_loader()
