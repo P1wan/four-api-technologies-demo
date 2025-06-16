@@ -1,0 +1,70 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Regras para o Projeto de Comparação de APIs (Trabalho 6)
+
+Estas são as diretrizes para a assistência de IA neste projeto. O objetivo é comparar as tecnologias SOAP, REST, GraphQL e gRPC, implementando um serviço de streaming de músicas.
+
+---
+
+## 1. Requisitos Fundamentais do Trabalho
+
+O cumprimento destes requisitos é obrigatório e tem prioridade sobre outras sugestões.
+
+- **Backend em Python**: Todo o código do servidor para os serviços (SOAP, REST, GraphQL, gRPC) deve ser mantido e desenvolvido exclusivamente em **Python**.
+
+- **Persistência de Dados em Memória**:
+    - Os arquivos de dados em `data/usuarios.json`, `data/musicas.json`, e `data/playlists.json` são a fonte de dados **inicial e somente leitura**.
+    - **NUNCA** modifique esses arquivos JSON como resultado de uma operação da API (criar, atualizar, remover).
+    - Todas as operações de CRUD devem manipular os dados **exclusivamente em memória**. As alterações serão perdidas quando o servidor reiniciar, o que é o comportamento esperado para este projeto. O carregamento inicial é feito pelo `dataloaders.py`.
+
+- **Testes de Carga com k6**:
+    - Os testes de desempenho comparativo entre as quatro tecnologias **serão realizados com a ferramenta k6**.
+    - Ao discutir ou criar scripts de teste, o foco deve ser o k6.
+    - As métricas principais a serem coletadas e comparadas são: **tempo de resposta (médio, p95), taxa de transferência (requisições/segundo) e taxa de erro** sob cargas concorrentes.
+
+- **Manutenção da Integridade para Testes**:
+    - A lógica de negócio e os endpoints existentes são a base para os testes. Evite alterações que removam ou mudem drasticamente a assinatura de uma função de serviço, pois isso quebrará os testes de unidade e de carga.
+
+---
+
+## 2. Boas Práticas por Tecnologia
+
+Ao trabalhar no código de um serviço específico, siga estas práticas:
+
+- **Para REST (`rest_service.py`)**:
+    - Utilize os verbos HTTP corretamente: `GET` para consultas, `POST` para criação, `PUT` para atualização completa e `DELETE` para remoção.
+    - Mantenha os endpoints focados em recursos (ex: `/users`, `/users/{user_id}`).
+    - Use os códigos de status HTTP padrão para indicar sucesso ou erro (ex: 200, 201, 404, 500).
+
+- **Para SOAP (`soap_service.py`)**:
+    - O contrato (WSDL) é a fonte da verdade. As operações devem seguir estritamente o que foi definido.
+    - A comunicação deve usar o padrão XML Envelope.
+    - Utilize a biblioteca `spyne` conforme já estabelecido no projeto.
+
+- **Para GraphQL (`graphql_service.py`)**:
+    - Respeite a separação entre `Query` (para leitura) e `Mutation` (para escrita/alteração).
+    - O schema define as operações possíveis. As solicitações do cliente devem ser validadas contra ele.
+    - Evite lógica de negócio complexa nos resolvers; mantenha-os como uma camada fina que chama os serviços apropriados.
+
+- **Para gRPC (`grpc_service.py`)**:
+    - O arquivo `.proto` é o contrato que define os serviços, mensagens e tipos. **Sempre** gere novamente os stubs (`streaming_pb2.py`, `streaming_pb2_grpc.py`) usando `generate_grpc.py` após qualquer alteração no `.proto`.
+    - Utilize Protocol Buffers para a serialização de dados, garantindo eficiência.
+
+---
+
+## 3. Interação e Ferramentas de Teste
+
+- **Clareza nas Respostas**: Forneça explicações diretas e claras, focadas no contexto do projeto. Ao sugerir código, explique o porquê daquela solução.
+
+- **Evolução em Vez de Revolução**: Não faça refatorações drásticas ou alterações que mudem a arquitetura fundamental. Proponha melhorias de forma incremental e explique os benefícios de cada passo.
+
+- **Uso do Postman para Testes Manuais**:
+    - Compreenda que o Postman é usado para testes funcionais em cada um dos serviços.
+    - Para **REST**, auxilie na criação de requisições com os verbos, URLs e corpos JSON corretos.
+    - Para **SOAP**, ajude a montar o corpo da requisição em XML (SOAP Envelope) e a configurar o header `SOAPAction`.
+    - Para **GraphQL**, oriente sobre como usar o cliente GraphQL do Postman, enviando as queries ou mutations no corpo da requisição.
+
+    - Para **gRPC**, explique como importar o arquivo `.proto` no Postman para que ele possa descobrir os serviços e métodos disponíveis, permitindo testes de forma interativa.

@@ -23,39 +23,19 @@ from spyne.protocol.soap import Soap11
 from spyne.server.wsgi import WsgiApplication
 from wsgiref.simple_server import make_server
 import json
-import uuid
 from typing import List, Dict, Optional
 import traceback
 
 # Usar dados reais gerados em data/
 from dataloaders import get_data_loader
 
-# Carrega dados uma única vez
-data_loader = get_data_loader()
+# Função para obter data_loader dinamicamente
+def get_loader():
+    return get_data_loader()
 
 # Criar cópias locais para evitar modificações dos dados compartilhados
-USUARIOS = [usuario.copy() for usuario in data_loader.usuarios]
-MUSICAS = [
-    {
-        "id": musica["id"],
-        "nome": musica["nome"],
-        "artista": musica["artista"],
-        "duracao": musica.get("duracaoSegundos", musica.get("duracao", 0)),
-    }
-    for musica in data_loader.musicas
-]
-
-def obter_playlists_locais() -> List[Dict]:
-    """Retorna playlists no formato usado pelo serviço SOAP."""
-    return [
-        {
-            "id": playlist["id"],
-            "nome": playlist["nome"],
-            "usuario": playlist["idUsuario"],
-            "musicas": playlist["musicas"],
-        }
-        for playlist in data_loader.playlists
-    ]
+# SOAP agora usa delegação total para o data_loader
+# Não precisa mais de cópias locais ou listas temporárias
 
 # Modelos SOAP padronizados
 class Usuario(ComplexModel):
@@ -92,106 +72,104 @@ class StreamingService(ServiceBase):
     @rpc(_returns=Array(Usuario))
     def listar_usuarios(ctx):
         """Lista todos os usuários do sistema."""
-        return [Usuario(**usuario) for usuario in USUARIOS]
+        return [Usuario(**usuario) for usuario in get_loader().usuarios]
     
     @rpc(_returns=Array(Musica))
     def listar_musicas(ctx):
         """Lista todas as músicas do sistema."""
-        return [Musica(**musica) for musica in MUSICAS]
+        return [Musica(id=m["id"], nome=m["nome"], artista=m["artista"], 
+                      duracao=m["duracao_segundos"]) 
+                for m in get_loader().musicas]
     
     @rpc(_returns=Array(Playlist))
     def listar_playlists(ctx):
         """Lista todas as playlists do sistema."""
-        playlists = obter_playlists_locais()
-        return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in playlists]
+        playlists = []
+        for p in get_loader().playlists:
+            playlists.append(Playlist(id=p["id"], nome=p["nome"], usuario=p["id_usuario"]))
+        return playlists
 
     @rpc(Unicode, _returns=Array(Playlist))
     def listar_playlists_usuario(ctx, id_usuario):
         """Lista playlists de um usuário específico."""
-        playlists = [p for p in obter_playlists_locais() if p["usuario"] == id_usuario]
-        return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in playlists]
+        result_playlists = []
+        for p in get_loader().playlists:
+            if p["id_usuario"] == id_usuario:
+                result_playlists.append(Playlist(id=p["id"], nome=p["nome"], usuario=p["id_usuario"]))
+        return result_playlists
 
     @rpc(Unicode, _returns=Array(Musica))
     def listar_musicas_playlist(ctx, id_playlist):
         """Lista músicas de uma playlist específica."""
-        playlist = next((p for p in obter_playlists_locais() if p["id"] == id_playlist), None)
+        playlist = next((p for p in get_loader().playlists if p["id"] == id_playlist), None)
         if not playlist:
             return []
         
         musicas_da_playlist = []
         for id_musica in playlist["musicas"]:
-            musica = next((m for m in MUSICAS if m["id"] == id_musica), None)
+            musica = next((m for m in get_loader().musicas if m["id"] == id_musica), None)
             if musica:
-                musicas_da_playlist.append(Musica(**musica))
+                musicas_da_playlist.append(Musica(
+                    id=musica["id"], nome=musica["nome"], artista=musica["artista"],
+                    duracao=musica["duracao_segundos"]
+                ))
         return musicas_da_playlist
 
     @rpc(Unicode, _returns=Array(Playlist))
     def listar_playlists_com_musica(ctx, id_musica):
         """Lista playlists que contêm uma música específica."""
-        playlists = [p for p in obter_playlists_locais() if id_musica in p["musicas"]]
-        return [Playlist(id=p["id"], nome=p["nome"], usuario=p["usuario"]) for p in playlists]
+        result_playlists = []
+        for p in get_loader().playlists:
+            if id_musica in p["musicas"]:
+                result_playlists.append(Playlist(id=p["id"], nome=p["nome"], usuario=p["id_usuario"]))
+        return result_playlists
     
     @rpc(Unicode, _returns=Usuario)
     def obter_usuario(ctx, id_usuario):
         """Obtém um usuário por ID."""
-        usuario = next((u for u in USUARIOS if u["id"] == id_usuario), None)
+        usuario = get_loader().get_usuario(id_usuario)
         if usuario:
             return Usuario(**usuario)
-        return Usuario(id="", nome="", idade=0)
+        return Usuario(id=None, nome=None, idade=0)
 
     @rpc(Unicode, Integer, _returns=Usuario)
     def criar_usuario(ctx, nome, idade):
         """Cria um novo usuário."""
-        novo_id = str(uuid.uuid4())
-        novo_usuario = {"id": novo_id, "nome": nome, "idade": idade}
-        USUARIOS.append(novo_usuario)
+        novo_usuario = get_loader().criar_usuario(nome, idade)
         return Usuario(**novo_usuario)
 
     @rpc(Unicode, Unicode, Integer, _returns=Musica)
     def criar_musica(ctx, nome, artista, duracao):
         """Cria uma nova música."""
-        novo_id = str(uuid.uuid4())
-        nova_musica = {
-            "id": novo_id,
-            "nome": nome,
-            "artista": artista,
-            "duracao": duracao,
-        }
-        MUSICAS.append(nova_musica)
-        return Musica(**nova_musica)
+        nova_musica = get_loader().criar_musica(nome, artista, duracao_segundos=duracao)
+        return Musica(id=nova_musica["id"], nome=nova_musica["nome"], 
+                     artista=nova_musica["artista"], 
+                     duracao=nova_musica["duracao_segundos"])
 
     @rpc(Unicode, Unicode, Array(Unicode), _returns=Playlist)
     def criar_playlist(ctx, nome, id_usuario, musicas):
         """Cria uma nova playlist."""
-        novo_id = str(uuid.uuid4())
-        nova_playlist = {
-            "id": novo_id,
-            "nome": nome,
-            "usuario": id_usuario,
-            "musicas": list(musicas) if musicas else [],
-        }
-        # Não modificar dados compartilhados - apenas retornar o resultado
-        return Playlist(id=novo_id, nome=nome, usuario=id_usuario)
+        nova_playlist = get_loader().criar_playlist(nome, id_usuario, list(musicas) if musicas else [])
+        return Playlist(id=nova_playlist["id"], nome=nova_playlist["nome"], usuario=nova_playlist["id_usuario"])
 
     @rpc(Unicode, _returns=Playlist)
     def obter_playlist(ctx, id_playlist):
         """Obtém uma playlist por ID."""
-        playlist = next((p for p in obter_playlists_locais() if p["id"] == id_playlist), None)
+        playlist = get_loader().get_playlist(id_playlist)
         if playlist:
-            return Playlist(id=playlist["id"], nome=playlist["nome"], usuario=playlist["usuario"])
-        return Playlist(id="", nome="", usuario="")
+            return Playlist(id=playlist["id"], nome=playlist["nome"], usuario=playlist["id_usuario"])
+        return Playlist(id=None, nome=None, usuario=None)
 
     @rpc(_returns=Estatisticas)
     def obter_estatisticas(ctx):
         """Retorna estatísticas do serviço."""
-        playlists = obter_playlists_locais()
-        total_playlists = len(playlists)
-        total_musicas = len(MUSICAS)
-        total_usuarios = len(USUARIOS)
+        total_playlists = len(get_loader().playlists)
+        total_musicas = len(get_loader().musicas)
+        total_usuarios = len(get_loader().usuarios)
         
         media_musicas_por_playlist = 0.0
         if total_playlists > 0:
-            total_musicas_em_playlists = sum(len(p.get("musicas", [])) for p in playlists)
+            total_musicas_em_playlists = sum(len(p.get("musicas", [])) for p in get_loader().playlists)
             media_musicas_por_playlist = total_musicas_em_playlists / total_playlists
         
         return Estatisticas(
@@ -208,96 +186,53 @@ class StreamingService(ServiceBase):
     @rpc(Unicode, Unicode, Integer, _returns=Usuario)
     def atualizar_usuario(ctx, id_usuario, nome, idade):
         """Atualiza um usuário existente."""
-        # Verificar se usuário existe
-        usuario = next((u for u in USUARIOS if u["id"] == id_usuario), None)
-        if not usuario:
-            # Para demonstração, retornar usuário vazio se não encontrado
-            return Usuario(id="", nome="", idade=0)
-        
-        # Validações
-        if not nome or len(nome.strip()) == 0:
-            return Usuario(id="", nome="", idade=0)  # Erro de validação
-        
-        if idade < 0 or idade > 150:
-            return Usuario(id="", nome="", idade=0)  # Erro de validação
-        
-        # Para demonstração: retornar versão atualizada sem modificar dados originais
-        return Usuario(id=id_usuario, nome=nome.strip(), idade=idade)
+        usuario_atualizado = get_loader().atualizar_usuario(id_usuario, nome, idade)
+        if usuario_atualizado:
+            return Usuario(**usuario_atualizado)
+        return Usuario(id=None, nome=None, idade=0)
 
     @rpc(Unicode, _returns=Boolean)
     def deletar_usuario(ctx, id_usuario):
         """Remove um usuário do sistema."""
-        # Verificar se usuário existe
-        usuario = next((u for u in USUARIOS if u["id"] == id_usuario), None)
-        if not usuario:
-            return False
-        
-        # Para demonstração: simular remoção sem modificar dados originais
-        return True
+        return get_loader().deletar_usuario(id_usuario)
 
     @rpc(Unicode, Unicode, Unicode, Integer, _returns=Musica)
     def atualizar_musica(ctx, id_musica, nome, artista, duracao):
         """Atualiza uma música existente."""
-        # Verificar se música existe
-        musica = next((m for m in MUSICAS if m["id"] == id_musica), None)
-        if not musica:
-            return Musica(id="", nome="", artista="", duracao=0)
-        
-        # Validações
-        if not nome or len(nome.strip()) == 0:
-            return Musica(id="", nome="", artista="", duracao=0)
-        
-        if not artista or len(artista.strip()) == 0:
-            return Musica(id="", nome="", artista="", duracao=0)
-        
-        if duracao <= 0:
-            return Musica(id="", nome="", artista="", duracao=0)
-        
-        # Para demonstração: retornar versão atualizada sem modificar dados originais
-        return Musica(id=id_musica, nome=nome.strip(), artista=artista.strip(), duracao=duracao)
+        musica_atualizada = get_loader().atualizar_musica(id_musica, nome, artista, duracao_segundos=duracao)
+        if musica_atualizada:
+            return Musica(id=musica_atualizada["id"], nome=musica_atualizada["nome"], 
+                         artista=musica_atualizada["artista"], 
+                         duracao=musica_atualizada["duracao_segundos"])
+        return Musica(id=None, nome=None, artista=None, duracao=0)
 
     @rpc(Unicode, _returns=Boolean)
     def deletar_musica(ctx, id_musica):
         """Remove uma música do sistema."""
-        # Verificar se música existe
-        musica = next((m for m in MUSICAS if m["id"] == id_musica), None)
-        if not musica:
-            return False
-        
-        # Para demonstração: simular remoção sem modificar dados originais
-        return True
+        return get_loader().deletar_musica(id_musica)
 
     @rpc(Unicode, Unicode, Array(Unicode), _returns=Playlist)
     def atualizar_playlist(ctx, id_playlist, nome, musicas):
         """Atualiza uma playlist existente."""
-        # Verificar se playlist existe
-        playlist = next((p for p in obter_playlists_locais() if p["id"] == id_playlist), None)
-        if not playlist:
-            return Playlist(id="", nome="", usuario="")
-        
-        # Validações
-        if not nome or len(nome.strip()) == 0:
-            return Playlist(id="", nome="", usuario="")
-        
-        # Verificar se todas as músicas existem
-        for id_musica in musicas:
-            musica = next((m for m in MUSICAS if m["id"] == id_musica), None)
-            if not musica:
-                return Playlist(id="", nome="", usuario="")  # Música não encontrada
-        
-        # Para demonstração: retornar versão atualizada sem modificar dados originais
-        return Playlist(id=id_playlist, nome=nome.strip(), usuario=playlist["usuario"])
+        playlist_atualizada = get_loader().atualizar_playlist(id_playlist, nome, list(musicas) if musicas else None)
+        if playlist_atualizada:
+            return Playlist(id=playlist_atualizada["id"], nome=playlist_atualizada["nome"], 
+                           usuario=playlist_atualizada["id_usuario"])
+        return Playlist(id=None, nome=None, usuario=None)
 
     @rpc(Unicode, _returns=Boolean)
     def deletar_playlist(ctx, id_playlist):
         """Remove uma playlist do sistema."""
-        # Verificar se playlist existe
-        playlist = next((p for p in obter_playlists_locais() if p["id"] == id_playlist), None)
-        if not playlist:
-            return False
-        
-        # Para demonstração: simular remoção sem modificar dados originais
-        return True
+        return get_loader().deletar_playlist(id_playlist)
+
+    @rpc(_returns=Array(Playlist))
+    def listar_playlists_simples(ctx):
+        """Lista playlists sem o campo musicas para teste."""
+        playlists = []
+        for p in get_loader().playlists[:5]:  # Apenas 5 para teste
+            playlists.append(Playlist(id=p["id"], nome=p["nome"], usuario=p["id_usuario"]))
+        return playlists
+
 def criar_aplicacao_soap():
     """Cria a aplicação SOAP."""
     application = Application(

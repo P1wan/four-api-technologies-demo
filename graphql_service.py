@@ -8,6 +8,7 @@ Padronizado seguindo convenções Python e boas práticas de desenvolvimento.
 
 import strawberry
 from strawberry.fastapi import GraphQLRouter
+from strawberry.schema.config import StrawberryConfig
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -61,26 +62,27 @@ class Musica:
     id: str
     nome: str
     artista: str
-    # Manter consistência: usar snake_case no GraphQL, converter de camelCase do JSON
-    duracao_segundos: int
+    # Forçar naming snake_case no schema GraphQL
+    duracao_segundos: int = strawberry.field(name="duracao_segundos")
 
 @strawberry.input
 class MusicaInput:
     nome: str
     artista: str
-    duracao_segundos: int
+    duracao_segundos: int = strawberry.field(name="duracao_segundos")
 
 @strawberry.type
 class Playlist:
     id: str
     nome: str
-    id_usuario: str
+    # Forçar naming snake_case no schema GraphQL
+    id_usuario: str = strawberry.field(name="id_usuario")
     musicas: List[str]  # IDs das músicas
 
 @strawberry.input
 class PlaylistInput:
     nome: str
-    id_usuario: str
+    id_usuario: str = strawberry.field(name="id_usuario")
     musicas: List[str]
 
 @strawberry.type
@@ -93,11 +95,11 @@ class PlaylistCompleta:
 
 @strawberry.type
 class Estatisticas:
-    total_usuarios: int
-    total_musicas: int
-    total_playlists: int
-    usuarios_com_playlists: int
-    media_musicas_por_playlist: float
+    total_usuarios: int = strawberry.field(name="total_usuarios")
+    total_musicas: int = strawberry.field(name="total_musicas")
+    total_playlists: int = strawberry.field(name="total_playlists")
+    usuarios_com_playlists: int = strawberry.field(name="usuarios_com_playlists")
+    media_musicas_por_playlist: float = strawberry.field(name="media_musicas_por_playlist")
     tecnologia: str
 
 @dataclass
@@ -108,66 +110,9 @@ class GraphQLContext:
     def __init__(self, loaders: GraphQLDataLoaders):
         self.loaders = loaders
 
-# Data Loader para fallback (somente para demonstração)
-class GraphQLDataLoaderFallback:
-    """Loader de dados mock utilizado apenas para ambientes de demonstração."""
-
-    def __init__(self):
-        self.usuarios = [
-            {"id": "user1", "nome": "Ana Silva", "idade": 28},
-            {"id": "user2", "nome": "João Santos", "idade": 35},
-            {"id": "user3", "nome": "Maria Costa", "idade": 22},
-            {"id": "user4", "nome": "Pedro Lima", "idade": 45},
-            {"id": "user5", "nome": "Lucia Ferreira", "idade": 31}
-        ]
-        self.musicas = [
-            {"id": "music1", "nome": "Amor Perfeito", "artista": "Ana Silva", "duracaoSegundos": 240},
-            {"id": "music2", "nome": "Noite Estrelada", "artista": "João Santos", "duracaoSegundos": 210},
-            {"id": "music3", "nome": "Coração Selvagem", "artista": "Maria Costa", "duracaoSegundos": 195},
-            {"id": "music4", "nome": "Despertar", "artista": "Pedro Lima", "duracaoSegundos": 280},
-            {"id": "music5", "nome": "Liberdade", "artista": "Ana Silva", "duracaoSegundos": 225},
-            {"id": "music6", "nome": "Saudade", "artista": "Lucia Ferreira", "duracaoSegundos": 260},
-            {"id": "music7", "nome": "Tempestade", "artista": "João Santos", "duracaoSegundos": 190},
-            {"id": "music8", "nome": "Serenata", "artista": "Maria Costa", "duracaoSegundos": 175}
-        ]
-        self.playlists = [
-            {"id": "playlist1", "nome": "Meus Favoritos", "idUsuario": "user1", "musicas": ["music1", "music2", "music5"]},
-            {"id": "playlist2", "nome": "Relaxar", "idUsuario": "user1", "musicas": ["music3", "music6", "music8"]},
-            {"id": "playlist3", "nome": "Energia Total", "idUsuario": "user2", "musicas": ["music4", "music7", "music1", "music5"]},
-            {"id": "playlist4", "nome": "Workout Mix", "idUsuario": "user3", "musicas": ["music2", "music4", "music7"]}
-        ]
-
-        print("GraphQL Data Loader (fallback) inicializado")
-
-    def obter_usuario(self, id_usuario: str) -> Optional[dict]:
-        """Obtém usuário por ID com tratamento de erro."""
-        usuario = next((u for u in self.usuarios if u["id"] == id_usuario), None)
-        if not usuario:
-            raise ValidationError(f"Usuário não encontrado: {id_usuario}", "id")
-        return usuario
-
-    def obter_musica(self, id_musica: str) -> Optional[dict]:
-        """Obtém música por ID com tratamento de erro."""
-        musica = next((m for m in self.musicas if m["id"] == id_musica), None)
-        if not musica:
-            raise ValidationError(f"Música não encontrada: {id_musica}", "id")
-        return musica
-
-    def obter_playlist(self, id_playlist: str) -> Optional[dict]:
-        """Obtém playlist por ID com tratamento de erro."""
-        playlist = next((p for p in self.playlists if p["id"] == id_playlist), None)
-        if not playlist:
-            raise ValidationError(f"Playlist não encontrada: {id_playlist}", "id")
-        return playlist
-
-# Instância global: tenta usar dados reais e faz fallback para o mock
-try:
-    data_loader = get_data_loader()
-    print("Dados reais carregados para GraphQL")
-except Exception as exc:
-    print(f"Erro ao carregar dados reais: {exc}")
-    print("Utilizando GraphQL fallback")
-    data_loader = GraphQLDataLoaderFallback()
+# Instância global do data loader (sempre usar dados reais)
+data_loader = get_data_loader()
+print("✅ StreamingDataLoader carregado para GraphQL")
 
 # Resolvers GraphQL
 
@@ -191,11 +136,12 @@ class Query:
                 id=m["id"],
                 nome=m["nome"],
                 artista=m["artista"],
-                # Conversão: duracaoSegundos (JSON) -> duracao_segundos (GraphQL)
-                duracao_segundos=m["duracaoSegundos"]
+                # ✅ snake_case nativo do DataLoader
+                duracao_segundos=m["duracao_segundos"]
             )
             for m in musicas
-        ]    @strawberry.field
+        ]    
+    @strawberry.field
     async def usuario(self, info, id: str) -> Optional[Usuario]:
         """Obtém um usuário por ID."""
         try:
@@ -215,7 +161,7 @@ class Query:
                 Playlist(
                     id=p["id"],
                     nome=p["nome"],
-                    id_usuario=p["idUsuario"],
+                    id_usuario=p["id_usuario"],
                     musicas=p["musicas"]
                 )
                 for p in playlists
@@ -233,7 +179,7 @@ class Query:
                     id=m["id"],
                     nome=m["nome"],
                     artista=m["artista"],
-                    duracao_segundos=m["duracaoSegundos"]
+                    duracao_segundos=m["duracao_segundos"]
                 )
                 for m in musicas
             ]
@@ -249,13 +195,14 @@ class Query:
                 Playlist(
                     id=p["id"],
                     nome=p["nome"],
-                    id_usuario=p["idUsuario"],
+                    id_usuario=p["id_usuario"],
                     musicas=p["musicas"]
                 )
                 for p in playlists
             ]
         except Exception:
-            return []    @strawberry.field
+            return []    
+    @strawberry.field
     async def playlist_completa(self, info, id_playlist: str) -> Optional[PlaylistCompleta]:
         """Obtém playlist com dados completos."""
         try:
@@ -265,7 +212,7 @@ class Query:
                 return None
 
             # Obter usuário
-            usuario_data = info.context["loaders"].data_loader.get_usuario(playlist["idUsuario"])
+            usuario_data = info.context["loaders"].data_loader.get_usuario(playlist["id_usuario"])
 
             # Obter músicas
             musicas = info.context["loaders"].data_loader.listar_musicas_playlist(id_playlist)
@@ -279,7 +226,7 @@ class Query:
                         id=m["id"],
                         nome=m["nome"],
                         artista=m["artista"],
-                        duracao_segundos=m["duracaoSegundos"]
+                        duracao_segundos=m["duracao_segundos"]
                     )
                     for m in musicas
                 ]
@@ -319,18 +266,10 @@ class Mutation:
             validar_nome(input.nome)
             validar_idade(input.idade)
             
-            import uuid
-            novo_id = str(uuid.uuid4())
-            novo_usuario = {
-                "id": novo_id,
-                "nome": input.nome,
-                "idade": input.idade
-            }
+            # Usar o método CRUD do data_loader
+            novo_usuario = data_loader.criar_usuario(input.nome, input.idade)
             
-            # Para demonstração, adicionar à lista local (não persistente)
-            data_loader.usuarios.append(novo_usuario)
-            
-            return Usuario(id=novo_id, nome=input.nome, idade=input.idade)
+            return Usuario(id=novo_usuario["id"], nome=novo_usuario["nome"], idade=novo_usuario["idade"])
         except ValidationError as e:
             raise Exception(f"Erro de validação: {e.message}")
 
@@ -342,19 +281,18 @@ class Mutation:
             validar_nome(input.artista, "artista")
             validar_duracao(input.duracao_segundos)
             
-            import uuid
-            novo_id = str(uuid.uuid4())
+            # Usar o método CRUD do data_loader
+            nova_musica = data_loader.criar_musica(input.nome, input.artista, input.duracao_segundos)
             
-            # Para demonstração: não modificar dados compartilhados
-            # Em produção: salvar no banco de dados
             return Musica(
-                id=novo_id,
-                nome=input.nome,
-                artista=input.artista,
-                duracao_segundos=input.duracao_segundos
+                id=nova_musica["id"],
+                nome=nova_musica["nome"],
+                artista=nova_musica["artista"],
+                duracao_segundos=nova_musica["duracao_segundos"]
             )
         except ValidationError as e:
-            raise Exception(f"Erro de validação: {e.message}")    @strawberry.mutation
+            raise Exception(f"Erro de validação: {e.message}")    
+    @strawberry.mutation
     def criar_playlist(self, input: PlaylistInput) -> Playlist:
         """Cria uma nova playlist."""
         try:
@@ -371,35 +309,35 @@ class Mutation:
                 if not musica:
                     raise ValidationError(f"Música {id_musica} não encontrada", "musicas")
             
-            import uuid
-            novo_id = str(uuid.uuid4())
+            # Usar o método CRUD do data_loader
+            nova_playlist = data_loader.criar_playlist(input.nome, input.id_usuario, input.musicas)
             
-            # Para demonstração: não modificar dados compartilhados
-            # Em produção: salvar no banco de dados
             return Playlist(
-                id=novo_id,
-                nome=input.nome,
-                id_usuario=input.id_usuario,
-                musicas=input.musicas
+                id=nova_playlist["id"],
+                nome=nova_playlist["nome"],
+                id_usuario=nova_playlist["id_usuario"],
+                musicas=nova_playlist["musicas"]
             )
         except ValidationError as e:
-            raise Exception(f"Erro de validação: {e.message}")    @strawberry.mutation
+            raise Exception(f"Erro de validação: {e.message}")    
+    @strawberry.mutation
     def atualizar_usuario(self, id: str, input: UsuarioInput) -> Usuario:
         """Atualiza um usuário existente."""
         try:
             validar_nome(input.nome)
             validar_idade(input.idade)
             
-            # Verificar se usuário existe
-            usuario = data_loader.get_usuario(id)
-            if not usuario:
+            # Usar o método CRUD do data_loader
+            usuario_atualizado = data_loader.atualizar_usuario(id, input.nome, input.idade)
+            if not usuario_atualizado:
                 raise ValidationError("Usuário não encontrado", "id")
             
-            # Para demonstração: retornar versão atualizada sem modificar dados originais
-            return Usuario(id=id, nome=input.nome, idade=input.idade)
+            return Usuario(id=usuario_atualizado["id"], nome=usuario_atualizado["nome"], idade=usuario_atualizado["idade"])
             
         except ValidationError as e:
-            raise Exception(f"Erro de validação: {e.message}")    @strawberry.mutation
+            raise Exception(f"Erro de validação: {e.message}")    
+            
+    @strawberry.mutation
     def atualizar_musica(self, id: str, input: MusicaInput) -> Musica:
         """Atualiza uma música existente."""
         try:
@@ -407,17 +345,16 @@ class Mutation:
             validar_nome(input.artista, "artista")
             validar_duracao(input.duracao_segundos)
             
-            # Verificar se música existe
-            musica = data_loader.get_musica(id)
-            if not musica:
+            # Usar o método CRUD do data_loader
+            musica_atualizada = data_loader.atualizar_musica(id, input.nome, input.artista, input.duracao_segundos)
+            if not musica_atualizada:
                 raise ValidationError("Música não encontrada", "id")
             
-            # Para demonstração: retornar versão atualizada sem modificar dados originais
             return Musica(
-                id=id,
-                nome=input.nome,
-                artista=input.artista,
-                duracao_segundos=input.duracao_segundos
+                id=musica_atualizada["id"],
+                nome=musica_atualizada["nome"],
+                artista=musica_atualizada["artista"],
+                duracao_segundos=musica_atualizada["duracao_segundos"]
             )
             
         except ValidationError as e:
@@ -429,40 +366,27 @@ class Mutation:
         try:
             validar_nome(input.nome)
             
-            # Verificar se playlist existe
-            if hasattr(data_loader, 'obter_playlist_por_id'):
-                playlist = data_loader.obter_playlist_por_id(id)
-            else:
-                playlist = data_loader.obter_playlist(id)
-            
-            if not playlist:
-                raise ValidationError("Playlist não encontrada", "id")
-            
             # Verificar se usuário existe
-            if hasattr(data_loader, 'obter_usuario_por_id'):
-                usuario = data_loader.obter_usuario_por_id(input.id_usuario)
-            else:
-                usuario = data_loader.obter_usuario(input.id_usuario)
-                
+            usuario = data_loader.get_usuario(input.id_usuario)
             if not usuario:
                 raise ValidationError("Usuário não encontrado", "id_usuario")
             
             # Verificar se músicas existem
             for id_musica in input.musicas:
-                if hasattr(data_loader, 'obter_musica_por_id'):
-                    musica = data_loader.obter_musica_por_id(id_musica)
-                else:
-                    musica = data_loader.obter_musica(id_musica)
-                
+                musica = data_loader.get_musica(id_musica)
                 if not musica:
                     raise ValidationError(f"Música {id_musica} não encontrada", "musicas")
             
-            # Para demonstração: retornar versão atualizada sem modificar dados originais
+            # Usar o método CRUD do data_loader
+            playlist_atualizada = data_loader.atualizar_playlist(id, input.nome, input.musicas)
+            if not playlist_atualizada:
+                raise ValidationError("Playlist não encontrada", "id")
+            
             return Playlist(
-                id=id,
-                nome=input.nome,
-                id_usuario=input.id_usuario,
-                musicas=input.musicas
+                id=playlist_atualizada["id"],
+                nome=playlist_atualizada["nome"],
+                id_usuario=playlist_atualizada["id_usuario"],
+                musicas=playlist_atualizada["musicas"]
             )
             
         except ValidationError as e:
@@ -472,17 +396,11 @@ class Mutation:
     def deletar_usuario(self, id: str) -> bool:
         """Remove um usuário do sistema."""
         try:
-            # Verificar se usuário existe
-            if hasattr(data_loader, 'obter_usuario_por_id'):
-                usuario = data_loader.obter_usuario_por_id(id)
-            else:
-                usuario = data_loader.obter_usuario(id)
-            
-            if not usuario:
+            # Usar o método CRUD do data_loader
+            sucesso = data_loader.deletar_usuario(id)
+            if not sucesso:
                 raise ValidationError("Usuário não encontrado", "id")
             
-            # Para demonstração: simular remoção sem modificar dados originais
-            # Em produção: remover do banco de dados
             return True
             
         except ValidationError as e:
@@ -492,17 +410,11 @@ class Mutation:
     def deletar_musica(self, id: str) -> bool:
         """Remove uma música do sistema."""
         try:
-            # Verificar se música existe
-            if hasattr(data_loader, 'obter_musica_por_id'):
-                musica = data_loader.obter_musica_por_id(id)
-            else:
-                musica = data_loader.obter_musica(id)
-            
-            if not musica:
+            # Usar o método CRUD do data_loader
+            sucesso = data_loader.deletar_musica(id)
+            if not sucesso:
                 raise ValidationError("Música não encontrada", "id")
             
-            # Para demonstração: simular remoção sem modificar dados originais
-            # Em produção: remover do banco de dados
             return True
             
         except ValidationError as e:
@@ -512,17 +424,11 @@ class Mutation:
     def deletar_playlist(self, id: str) -> bool:
         """Remove uma playlist do sistema."""
         try:
-            # Verificar se playlist existe
-            if hasattr(data_loader, 'obter_playlist_por_id'):
-                playlist = data_loader.obter_playlist_por_id(id)
-            else:
-                playlist = data_loader.obter_playlist(id)
-            
-            if not playlist:
+            # Usar o método CRUD do data_loader
+            sucesso = data_loader.deletar_playlist(id)
+            if not sucesso:
                 raise ValidationError("Playlist não encontrada", "id")
             
-            # Para demonstração: simular remoção sem modificar dados originais
-            # Em produção: remover do banco de dados
             return True
             
         except ValidationError as e:
@@ -530,7 +436,12 @@ class Mutation:
 
 # ========== SCHEMA GRAPHQL ==========
 
-schema = strawberry.Schema(query=Query, mutation=Mutation)
+# Configuração para manter snake_case em vez de conversão automática para camelCase
+schema = strawberry.Schema(
+    query=Query, 
+    mutation=Mutation,
+    config=StrawberryConfig(auto_camel_case=False)
+)
 
 # ========== CONFIGURAÇÃO FASTAPI ==========
 

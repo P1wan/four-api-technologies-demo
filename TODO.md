@@ -1,240 +1,315 @@
-# TODO List - Projeto de Comparação de Tecnologias de Invocação Remota
+# Guia de Validação de Serviços - Próximos Passos
 
-## Status Atual: ✅ Correções Críticas Concluídas | 🚀 Pronto para Verificação de Funcionamento
-
----
-
-## 1. Implementação dos Serviços ✅ CONCLUÍDO
-
-### 1.1 Modelo de Dados ✅
-- ~~[x] Definir estrutura de dados (Usuários, Músicas, Playlists)~~
-- ~~[x] Implementar modelo de dados em modelagem_dados.py~~
-- ~~[x] Adicionar validações de dados~~
-- ~~[x] Implementar relacionamentos entre entidades~~
-
-### 1.2 Serviços REST ✅
-- ~~[x] Implementar endpoints básicos~~
-- ~~[x] Completar operações CRUD para todas as entidades~~
-- ~~[x] Adicionar documentação Swagger/OpenAPI~~
-- ~~[x] Implementar tratamento de erros~~
-- ~~[x] Adicionar paginação para listagens~~
-
-### 1.3 Serviços GraphQL ✅
-- ~~[x] Implementar schema básico~~
-- ~~[x] Completar todas as queries e mutations~~
-- ~~[x] Adicionar validações~~
-- ~~[x] Implementar tratamento de erros~~
-- ~~[x] Otimizar queries com DataLoader~~
-
-### 1.4 Serviços SOAP ✅
-- ~~[x] Definir WSDL~~
-- ~~[x] Implementar todas as operações~~
-- ~~[x] Adicionar validações~~
-- ~~[x] Implementar tratamento de erros~~
-- ~~[x] Documentar endpoints~~
-
-### 1.5 Serviços gRPC ✅
-- ~~[x] Definir proto files~~
-- ~~[x] Implementar todos os serviços~~
-- ~~[x] Adicionar validações~~
-- ~~[x] Implementar tratamento de erros~~
-- ~~[x] Documentar endpoints~~
+## 🎯 Objetivo
+Validar sistematicamente todos os serviços (REST, SOAP, gRPC) após as correções aplicadas ao GraphQL e ao sistema de dataloaders, garantindo funcionamento completo antes de implementar testes de carga com K6.
 
 ---
 
-## 2. ✅ CORREÇÕES CRÍTICAS - **CONCLUÍDO COM SUCESSO**
-
-### 2.1 Inconsistências de Nomenclatura ✅
-- ~~[x] **CRÍTICO**: Padronizar campo de duração~~
-  - ~~Manter `duracaoSegundos` em JSON (camelCase)~~
-  - ~~Usar `duracao_segundos` em protobuf e GraphQL (snake_case)~~
-  - ~~Implementar conversões adequadas entre formatos~~
-- ~~[x] Remover emojis e padronizar linguagem profissional~~
-- ~~[x] Aplicar convenções Python (snake_case) e padrões web~~
-- ~~[x] Criar documentação técnica apropriada~~
-
-### 2.2 Erro no gRPC Service ✅
-- ~~[x] **CRÍTICO**: Verificar `grpc_service.py:142`~~
-  - ~~Confirmado uso correto: `self.loader.obter_musica_por_id()`~~
-  - ~~Método funcionando corretamente~~
-
-### 2.3 Problemas de Concorrência ✅
-- ~~[x] **CRÍTICO**: Eliminar modificações diretas de dados compartilhados~~
-  - ~~Remover `data_loader.musicas.append()` direto de todos os serviços~~
-  - ~~Implementar operações de demonstração sem alterar dados originais~~
-  - ~~Separar dados mock de dados reais nos fallbacks~~
-  - ~~Documentar que operações CRUD são para demonstração~~
-
-### 2.4 Fallback e Documentação ✅
-- ~~[x] Verificar sistemas de fallback existentes~~
-- ~~[x] Documentar comportamento de fallback em comentários~~
-- ~~[x] Padronizar mensagens de erro e logs~~
-- ~~[x] Remover linguagem informal de todos os arquivos~~
+## ✅ Status Atual
+- **GraphQL**: ✅ Totalmente validado (13/13 testes passando)
+- **DataLoaders**: ✅ Corrigido com persistência temporária e CRUD completo
+- **REST**: ✅ Totalmente validado (24/24 testes passando) 
+- **SOAP**: ⏳ Pendente validação  
+- **gRPC**: ⏳ Pendente validação
 
 ---
 
-## 3. 🔄 VERIFICAÇÃO DE FUNCIONAMENTO - **PRÓXIMA TAREFA ATUAL**
+## 📋 Plano de Validação Sistemática
 
-### 3.1 Teste de Serviços Básicos
-- [X] **AGORA**: Executar todos os serviços simultaneamente
-- [ ] Testar endpoints fundamentais de cada serviço
-- [ ] Verificar se todas as correções funcionam corretamente
-- [ ] Documentar funcionamento atual para apresentação
+### ✅ Etapa 1: Validação do Serviço REST - CONCLUÍDA
 
-### 3.2 Verificação de Consistência
-- [ ] Comparar respostas entre serviços para mesmas consultas
-- [ ] Verificar conversões de nomenclatura (JSON ↔ GraphQL ↔ gRPC)
-- [ ] Testar casos edge (IDs inválidos, dados faltando)
-- [ ] Validar que operações CRUD retornam respostas consistentes
+#### ✅ 1.1 Testes Automatizados - CONCLUÍDA
+```bash
+# ✅ REALIZADO: Executar testes unitários do REST
+python -m pytest test_rest_service.py -v
 
-### 3.3 Testes de Integração
-- [ ] Verificar carregamento de dados do diretório `data/`
-- [ ] Testar fallbacks quando dados reais não estão disponíveis
-- [ ] Validar comportamento com dados vazios ou corrompidos
-- [ ] Confirmar que não há modificações dos dados originais
+# ✅ RESULTADO: Todos os 24 testes passando (100%)
+# ✅ CORREÇÕES APLICADAS:
+# - Removido return incorreto dos testes test_create_song e test_create_playlist
+# - Adicionada validação de usuário no endpoint de criação de playlist
+# - Serviço REST 100% funcional com operações CRUD completas
+```
 
----
+#### 1.2 Testes Manuais com Postman
+**Configuração:**
+- Base URL: `http://localhost:8001`
+- Content-Type: `application/json`
 
-## 4. 🔍 ANÁLISE DETALHADA DE CÓDIGO - **PRÓXIMA FASE**
+**Testes Essenciais:**
 
-### 4.1 Auditoria de Consistência
-- [ ] Verificar consistência de tipos de retorno entre serviços
-- [ ] Analisar tratamento de erros em edge cases
-- [ ] Verificar validações em todos os endpoints
-- [ ] Comparar comportamento entre serviços para mesmas operações
+**Usuários:**
+```
+GET    /users           # Listar todos
+GET    /users/1         # Obter específico
+POST   /users           # Criar novo
+PUT    /users/1         # Atualizar
+DELETE /users/1         # Deletar
+```
 
-### 4.2 Análise de Performance
-- [ ] Identificar gargalos nos data loaders
-- [ ] Analisar uso de memória com datasets grandes
-- [ ] Verificar otimizações de consultas
-- [ ] Avaliar necessidade de indexação adicional
+**Músicas:**
+```
+GET    /musicas         # Listar todas
+GET    /musicas/1       # Obter específica
+POST   /musicas         # Criar nova
+PUT    /musicas/1       # Atualizar
+DELETE /musicas/1       # Deletar
+```
 
-### 4.3 Análise de Segurança
-- [ ] Verificar validação de inputs em todos os serviços
-- [ ] Analisar possíveis vulnerabilidades de injeção
-- [ ] Verificar sanitização de dados
-- [ ] Avaliar exposição de informações sensíveis
+**Playlists:**
+```
+GET    /playlists       # Listar todas
+GET    /playlists/1     # Obter específica
+POST   /playlists       # Criar nova
+PUT    /playlists/1     # Atualizar
+DELETE /playlists/1     # Deletar
+```
 
----
-
-## 5. ⚡ MELHORIAS TÉCNICAS
-
-### 5.1 Operações CRUD Completas
-- [ ] Implementar persistência real (banco de dados)
-- [ ] Padronizar operações entre todos os serviços
-- [ ] Adicionar operações batch quando aplicável
-- [ ] Implementar transações onde necessário
-
-### 5.2 Paginação e Performance
-- [ ] Implementar paginação em GraphQL
-- [ ] Implementar paginação em SOAP
-- [ ] Implementar paginação em gRPC
-- [ ] Otimizar consultas com grandes datasets
-
-### 5.3 Tratamento de Erros
-- [ ] Padronizar códigos de erro entre serviços
-- [ ] Implementar logging estruturado
-- [ ] Adicionar métricas de erro
-- [ ] Criar documentação de códigos de erro
+#### ✅ 1.3 Verificações Específicas - CONCLUÍDA
+- [x] Códigos de status HTTP corretos (200, 201, 404, 500)
+- [x] Formato JSON válido nas respostas
+- [x] Paginação funcionando corretamente
+- [x] Tratamento de erros adequado
+- [x] Validação de dados de entrada
 
 ---
 
-## 6. Clientes e Interfaces
+## 📊 Resumo do Progresso Atual
 
-### 6.1 Cliente REST
-- [ ] Implementar cliente em JavaScript/Node.js
-- [ ] Adicionar tratamento de erros
-- [ ] Implementar retry logic
+### ✅ SERVIÇOS COMPLETAMENTE VALIDADOS:
+1. **GraphQL**: 13/13 testes passando
+   - Schema, queries e mutations funcionais
+   - DataLoaders integrados corretamente
+   
+2. **DataLoaders**: Sistema de persistência temporária 
+   - CRUD completo em memória
+   - Arquivos JSON como fonte inicial (somente leitura)
+   
+3. **REST**: 24/24 testes passando
+   - Todas as operações CRUD funcionais
+   - Validação de entrada implementada
+   - Códigos de status HTTP corretos
+   - Tratamento de erros adequado
 
-### 6.2 Cliente GraphQL
-- [ ] Implementar cliente em JavaScript/Node.js
-- [ ] Adicionar tratamento de erros
-- [ ] Implementar cache de queries
-
-### 6.3 Cliente SOAP
-- [ ] Implementar cliente em JavaScript/Node.js
-- [ ] Adicionar tratamento de erros
-- [ ] Implementar validação de respostas
-
-### 6.4 Cliente gRPC
-- [ ] Implementar cliente em JavaScript/Node.js
-- [ ] Adicionar tratamento de erros
-- [ ] Implementar streaming
+### 🎯 PRÓXIMO FOCO: Validação SOAP
+**Meta**: Garantir que o serviço SOAP esteja funcionando corretamente com os dataloaders atualizados.
 
 ---
 
-## 7. Testes de Carga
+### Etapa 2: Validação do Serviço SOAP
 
-### 7.1 Preparação
-- ~~[x] Criar script de geração de dados de teste~~
-- ~~[x] Implementar dados de teste (30 usuários, 30 músicas)~~
-- [ ] **APÓS VERIFICAÇÃO**: Expandir para 1000+ registros
-- [ ] Criar playlists de teste maiores
+#### 2.1 Testes Automatizados
+```bash
+# Executar testes unitários do SOAP
+python -m pytest test_soap_service.py -v
 
-### 7.2 Implementação dos Testes
-- [ ] **APÓS VERIFICAÇÃO**: Testar com dados atuais para baseline
-- [ ] Criar script de teste de carga para REST
-- [ ] Criar script de teste de carga para GraphQL  
-- [ ] Criar script de teste de carga para SOAP
-- [ ] Criar script de teste de carga para gRPC
-- [ ] Implementar métricas de performance
+# Verificar se todas as operações WSDL funcionam
+```
 
----
+#### 2.2 Testes Manuais com Postman
+**Configuração:**
+- URL: `http://localhost:8002/soap`
+- Content-Type: `text/xml`
+- SOAPAction: `"http://streaming.com/obter_usuarios"` (ajustar conforme operação)
 
-## 🎯 **PLANO DE AÇÃO ATUAL**
+**Exemplo de Teste - Obter Usuários:**
+```xml
+POST /soap
+SOAPAction: "http://streaming.com/obter_usuarios"
 
-### ✅ Fase 1: Correções Críticas - **CONCLUÍDA**
-1. ~~Padronizar nomenclatura (duracaoSegundos ↔ duracao_segundos)~~
-2. ~~Corrigir método gRPC (verificado como correto)~~
-3. ~~Eliminar modificações diretas de dados compartilhados~~
-4. ~~Remover emojis e padronizar linguagem profissional~~
-5. ~~Documentar operações como demonstração~~
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <obter_usuarios xmlns="http://streaming.com/" />
+  </soap:Body>
+</soap:Envelope>
+```
 
-### 🔄 Fase 2: Verificação de Funcionamento - **EM ANDAMENTO**
-1. **PRÓXIMO**: Executar sistema completo (`python main.py`)
-2. Testar cada serviço individualmente
-3. Verificar consistência entre respostas
-4. Documentar estado funcional atual
+**Operações a Testar:**
+- [ ] `obter_usuarios` - Listar usuários
+- [ ] `obter_usuario` - Obter usuário específico
+- [ ] `criar_usuario` - Criar novo usuário
+- [ ] `atualizar_usuario` - Atualizar usuário
+- [ ] `deletar_usuario` - Deletar usuário
+- [ ] Repetir para `musicas` e `playlists`
 
-### Fase 3: Preparação para Apresentação
-1. Demonstração completa de funcionamento
-2. Preparar slides destacando correções aplicadas
-3. Documentar próximos passos e melhorias
-
----
-
-## 📋 **MARCOS E CRONOGRAMA**
-
-- **✅ Concluído**: Implementação básica + Correções críticas
-- **🔄 Agora**: Verificação de funcionamento pós-correções  
-- **Hoje**: Demonstração funcional + Apresentação do progresso
-- **Próxima sessão**: Implementação de clientes + Testes básicos
-- **Marco seguinte**: Testes de carga + Análise comparativa
-- **Entrega final**: Documentação completa + Apresentação final
+#### 2.3 Verificações Específicas
+- [ ] Envelope SOAP válido nas respostas
+- [ ] WSDL acessível em `/soap?wsdl`
+- [ ] Namespace correto nas operações
+- [ ] Tratamento de erros SOAP (faults)
+- [ ] Conversão adequada de tipos de dados
 
 ---
 
-## ✅ **CONQUISTAS PRINCIPAIS**
+### Etapa 3: Validação do Serviço gRPC
 
-1. **Nomenclatura Padronizada**: Conversão adequada entre camelCase (JSON) e snake_case (protobuf/GraphQL)
-2. **Concorrência Resolvida**: Eliminação de modificações diretas de dados compartilhados
-3. **Código Profissional**: Remoção de emojis e linguagem informal
-4. **Documentação Clara**: Comentários explicando comportamento de demonstração
-5. **Validações Robustas**: Verificação de existência de dados antes de operações
-6. **Fallbacks Funcionais**: Sistemas de backup para ambientes de desenvolvimento
+#### 3.1 Testes Automatizados
+```bash
+# Executar testes unitários do gRPC
+python -m pytest test_grpc_service.py -v
+
+# Verificar se todos os métodos gRPC funcionam
+```
+
+#### 3.2 Testes Manuais com Postman
+**Configuração:**
+- URL: `localhost:50051`
+- Protocolo: gRPC
+- Importar arquivo: `streaming.proto`
+
+**Métodos a Testar:**
+- [ ] `GetUsuarios` - Listar usuários
+- [ ] `GetUsuario` - Obter usuário específico
+- [ ] `CreateUsuario` - Criar novo usuário
+- [ ] `UpdateUsuario` - Atualizar usuário
+- [ ] `DeleteUsuario` - Deletar usuário
+- [ ] Repetir para `GetMusicas`, `GetPlaylists`, etc.
+
+#### 3.3 Verificações Específicas
+- [ ] Serialização/deserialização protobuf
+- [ ] Conversão de nomenclatura (camelCase ↔ snake_case)
+- [ ] Tratamento de erros gRPC (status codes)
+- [ ] Validação de tipos de dados
+- [ ] Stubs atualizados (`streaming_pb2.py`, `streaming_pb2_grpc.py`)
 
 ---
 
-## ⚠️ **RISCOS MITIGADOS**
+### Etapa 4: Verificação de Consistência Entre Serviços
 
-1. ~~**Inconsistências de nomenclatura** - RESOLVIDO~~
-2. ~~**Modificações concorrentes de dados** - RESOLVIDO~~  
-3. ~~**Linguagem não profissional** - RESOLVIDO~~
-4. **Falta de paginação** - Para próxima fase (não crítico para demonstração)
-5. **Persistência temporária** - Documentado como limitação conhecida
+#### 4.1 Testes de Consistência de Dados
+Para cada operação, verificar se os resultados são consistentes:
+
+**Exemplo - Obter Usuário ID 1:**
+```bash
+# REST
+curl http://localhost:8001/users/1
+
+# GraphQL
+# Query: { usuario(id: 1) { id, nome, email } }
+
+# SOAP
+# obter_usuario com id=1
+
+# gRPC  
+# GetUsuario com id=1
+```
+
+#### 4.2 Verificações Críticas
+- [ ] Mesmos dados retornados por todos os serviços
+- [ ] Formato de datas consistente
+- [ ] Nomenclatura de campos respeitada (camelCase vs snake_case)
+- [ ] Tratamento de IDs inválidos
+- [ ] Comportamento com dados vazios
 
 ---
 
-*Última atualização: Pós-correções críticas completas*
-*Status: Sistema pronto para verificação de funcionamento e demonstração*
-*Próximo: Executar `python main.py` e testar funcionalidades* 
+### Etapa 5: Preparação para Testes de Carga K6
+
+#### 5.1 Documentação de Endpoints
+Criar arquivo `endpoints_summary.md` com:
+- [ ] Lista completa de endpoints de cada serviço
+- [ ] Exemplos de requisições e respostas
+- [ ] Códigos de status esperados
+- [ ] Payloads de teste padrão
+
+#### 5.2 Scripts de Teste Base
+Criar estrutura para scripts K6:
+```
+k6_tests/
+├── rest_test.js
+├── graphql_test.js  
+├── soap_test.js
+├── grpc_test.js
+└── shared/
+    ├── test_data.js
+    └── utils.js
+```
+
+#### 5.3 Métricas de Baseline
+Antes dos testes de carga, capturar métricas básicas:
+- [ ] Tempo de resposta médio de cada serviço
+- [ ] Uso de memória durante operações
+- [ ] Latência de startup dos serviços
+
+---
+
+## 🚀 Comandos Rápidos de Validação
+
+### Iniciar Todos os Serviços
+```bash
+python main.py
+```
+
+### Executar Todos os Testes Automatizados
+```bash
+# Todos os testes em sequência
+python -m pytest test_rest_service.py test_soap_service.py test_grpc_service.py test_graphql_service.py -v
+
+# Com relatório detalhado
+python -m pytest test_rest_service.py test_soap_service.py test_grpc_service.py test_graphql_service.py -v --tb=short
+```
+
+### Verificação Rápida de Serviços
+```bash
+# REST
+curl http://localhost:8001/users
+
+# SOAP WSDL
+curl http://localhost:8002/soap?wsdl
+
+# GraphQL Schema
+curl -X POST http://localhost:8003/graphql -H "Content-Type: application/json" -d '{"query":"{ __schema { types { name } } }"}'
+```
+
+---
+
+## ⚠️ Pontos de Atenção
+
+### Possíveis Problemas Herdados
+1. **Nomenclatura de Campos**: Verificar se REST/SOAP seguem a convenção de camelCase do JSON
+2. **Conversões de Dados**: Especialmente em gRPC (snake_case ↔ camelCase)
+3. **Tratamento de Erros**: Garantir que todos os serviços usam os dataloaders corretamente
+4. **Persistência Temporária**: Verificar se CREATE/UPDATE/DELETE funcionam em todos os serviços
+
+### Critérios de Sucesso
+- [ ] Todos os testes automatizados passando (100%)
+- [ ] Operações CRUD funcionando em todos os serviços
+- [ ] Respostas consistentes entre serviços para mesmos dados
+- [ ] Tratamento de erros adequado em todos os serviços
+- [ ] Performance aceitável em operações básicas
+
+---
+
+## 📁 Estrutura de Arquivos para Testes
+
+```
+tests_validation/
+├── postman_collections/
+│   ├── REST_Collection.json
+│   ├── SOAP_Collection.json
+│   ├── GraphQL_Collection.json
+│   └── gRPC_Collection.json
+├── test_results/
+│   ├── rest_validation.md
+│   ├── soap_validation.md
+│   ├── grpc_validation.md
+│   └── consistency_check.md
+└── k6_preparation/
+    ├── baseline_metrics.json
+    └── test_scenarios.md
+```
+
+---
+
+## 🎯 Próximo Marco: Testes de Carga K6
+
+Após validação completa, implementar:
+1. Scripts K6 para cada tecnologia
+2. Cenários de carga progressiva
+3. Comparação de métricas (latência, throughput, erro)
+4. Relatórios de performance comparativa
+5. Análise de escalabilidade
+
+---
+
+*Este guia deve ser seguido sequencialmente para garantir que todos os serviços estão funcionais antes de iniciar os testes de performance com K6.*
